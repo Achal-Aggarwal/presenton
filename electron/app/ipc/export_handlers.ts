@@ -23,6 +23,7 @@ import {
   resolveLaunchableExportChromiumPath,
 } from "../utils/export-chromium";
 import { resolveExportSpawnTarget } from "../utils/export-msix-runtime";
+import { desktopCookieHeader } from "../utils/desktop-auth";
 
 type RuntimeCandidate = {
   command: string;
@@ -83,6 +84,7 @@ export function setupExportHandlers() {
         format: exportAs,
         title: title,
         fastapiUrl: process.env.NEXT_PUBLIC_FAST_API,
+        cookieHeader: desktopCookieHeader(),
       };
 
       const randomUuid = uuidv4();
