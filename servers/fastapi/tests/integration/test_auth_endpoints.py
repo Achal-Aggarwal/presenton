@@ -1,5 +1,6 @@
 import asyncio
 import json
+from unittest.mock import patch
 
 import pytest
 
@@ -19,6 +20,14 @@ from models.sql.user import User
 from services.database import get_async_session
 from services.presenton_cloud import store_presenton_credentials
 from utils.get_env import get_presenton_oauth_issuer
+
+
+@pytest.fixture(autouse=True)
+def isolate_runtime_environment():
+    # Settings updates and startup load provider values into os.environ directly.
+    # Restore those application-owned writes as well as monkeypatched values.
+    with patch.dict("os.environ"):
+        yield
 
 
 def _build_client(tmp_path, lifespan=None) -> tuple[TestClient, object]:
