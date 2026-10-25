@@ -3251,7 +3251,10 @@ async def check_async_presentation_generation_status(
         raise HTTPException(
             status_code=404, detail="No presentation generation task found"
         )
-    response = status.model_copy(deep=True)
+    # model_copy() on a session-loaded row copies its SQLAlchemy instance state,
+    # so assigning to the copy fails once the original row is garbage collected.
+    # Build a detached instance from the row's values instead.
+    response = AsyncTaskModel(**status.model_dump())
     if response.data:
         response.data = absolute_mcp_result_links(request, response.data)
     return response

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi import BackgroundTasks, HTTPException
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from api.main import app
 from api.v1.ppt.endpoints.presentation import (
@@ -27,6 +28,7 @@ from models.presentation_and_path import PresentationPathAndEditPath
 from models.presentation_with_slides import PresentationWithSlides
 from models.sql.async_task import AsyncTaskModel
 from models.sql.presentation import PresentationModel, PresentationVersion
+from models.sql.user import User
 from utils.datetime_utils import get_current_utc_datetime
 
 
@@ -289,6 +291,52 @@ class TestPresentationGenerationAPI:
         )
 
         assert response == task
+
+    def test_presentation_status_with_data_works_with_a_real_session(self):
+        async def run():
+            engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+            session_maker = async_sessionmaker(engine, expire_on_commit=False)
+            async with engine.begin() as connection:
+                await connection.run_sync(User.__table__.create)
+                await connection.run_sync(AsyncTaskModel.__table__.create)
+
+            async with session_maker() as session:
+                task = AsyncTaskModel(
+                    type="presentation.generate",
+                    status="pending",
+                    data={"created_slides": 1, "path": "/app_data/deck.pptx"},
+                )
+                session.add(task)
+                await session.commit()
+                task_id = task.id
+
+            request = FakeRequest()
+            request.headers = {"X-Presenton-MCP-Request": "1"}
+            try:
+                async with session_maker() as session:
+                    with patch(
+                        "utils.mcp_public_urls.get_presenton_public_url",
+                        return_value="https://presenton.example",
+                    ):
+                        response = await check_async_presentation_generation_status(
+                            request=request,
+                            id=task_id,
+                            sql_session=session,
+                        )
+                    stored = await session.get(AsyncTaskModel, task_id)
+                    return response, stored
+            finally:
+                await engine.dispose()
+
+        response, stored = asyncio.run(run())
+
+        assert response.id == stored.id
+        assert response.status == "pending"
+        assert response.data == {
+            "created_slides": 1,
+            "path": "https://presenton.example/app_data/deck.pptx",
+        }
+        assert stored.data == {"created_slides": 1, "path": "/app_data/deck.pptx"}
 
     def test_smart_background_task_completes_and_exports(self):
         presentation = PresentationModel(
