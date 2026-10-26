@@ -89,6 +89,47 @@ def test_presentation_responses_include_cloud_compatible_type(generation_mode):
     assert response.model_dump(mode="json")["type"] == generation_mode
 
 
+@pytest.mark.parametrize(
+    "generation_mode,content,file_paths,reference_ids,prepared,expected",
+    [
+        ("standard", "", None, None, False, False),
+        ("standard", "Content added to a blank slide", None, None, False, False),
+        ("standard", "Build a deck", None, None, True, True),
+        ("standard", "", ["document.pdf"], None, True, True),
+        ("smart", "Build a deck", None, None, False, True),
+        ("smart", "", ["document.pdf"], None, False, True),
+        ("smart", "", None, [123], False, True),
+        ("smart", "", None, None, False, False),
+    ],
+)
+def test_presentation_responses_report_regeneration_availability(
+    generation_mode, content, file_paths, reference_ids, prepared, expected
+):
+    now = get_current_utc_datetime()
+    presentation = PresentationModel(
+        owner_id=uuid.uuid4(),
+        version=PresentationVersion.V2_STANDARD,
+        content=content,
+        file_paths=file_paths,
+        community_design_ids=reference_ids,
+        n_slides=1,
+        language="English",
+        generation_mode=generation_mode,
+        outlines={"slides": [{"content": "Slide outline"}]} if prepared else None,
+        structure={"slides": [0]} if prepared else None,
+        layout={"name": "template-v2-test"} if prepared else None,
+        created_at=now,
+        updated_at=now,
+    )
+    response = PresentationWithSlides(
+        **_presentation_response_data(presentation),
+        slides=[],
+    )
+
+    assert response.can_regenerate is expected
+    assert response.model_dump(mode="json")["can_regenerate"] is expected
+
+
 class TestPresentationGenerationAPI:
     def test_smart_async_generation_is_versioned_under_v2(self):
         paths = app.openapi()["paths"]

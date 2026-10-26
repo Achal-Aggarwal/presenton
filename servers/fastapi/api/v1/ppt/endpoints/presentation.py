@@ -343,6 +343,16 @@ def _presentation_response_data(presentation: PresentationModel) -> dict:
     data["type"] = (
         "smart" if presentation.generation_mode == "smart" else "standard"
     )
+    # Blank decks have no saved generation setup, even after slide edits.
+    data["can_regenerate"] = (
+        bool(
+            presentation.content.strip()
+            or presentation.file_paths
+            or presentation.community_design_ids
+        )
+        if presentation.generation_mode == "smart"
+        else bool(presentation.outlines and presentation.structure and presentation.layout)
+    )
     return data
 
 

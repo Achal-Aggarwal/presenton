@@ -125,6 +125,7 @@ const PresentationHeader = ({
     generationMetrics,
   } = useSelector((state: RootState) => state.presentationGeneration);
   const { onUndo, onRedo, canUndo, canRedo } = usePresentationUndoRedo();
+  const canRegenerate = presentationData?.can_regenerate === true && !isStreaming;
 
   useEffect(() => {
     if (isEditingTitle) {
@@ -383,6 +384,7 @@ const PresentationHeader = ({
     }
   };
   const handleReGenerate = () => {
+    if (!canRegenerate) return;
     setIsRegenerateConfirmOpen(false);
     dispatch(clearPresentationData());
     dispatch(clearHistory());
@@ -638,14 +640,24 @@ const PresentationHeader = ({
             </ToolTip>
           )}
           <div className="flex items-center gap-2 bg-[#F6F6F9] px-3.5 h-[38px] border border-[#EDECEC] rounded-[80px]">
-            <ToolTip content="Regenerate Presentation">
-              <button
-                type="button"
-                onClick={() => setIsRegenerateConfirmOpen(true)}
-                className="group"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-[#101323] group-hover:text-[#5141e5] duration-300" />
-              </button>
+            <ToolTip content={
+              canRegenerate
+                ? "Regenerate Presentation"
+                : isStreaming
+                  ? "Wait until generation finishes"
+                  : "Only AI-generated presentations can be regenerated"
+            }>
+              <span className="inline-flex">
+                <button
+                  type="button"
+                  aria-label="Regenerate presentation"
+                  disabled={!canRegenerate}
+                  onClick={() => setIsRegenerateConfirmOpen(true)}
+                  className="text-[#101323] enabled:hover:text-[#5141e5] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 duration-300" />
+                </button>
+              </span>
             </ToolTip>
             <Separator orientation="vertical" className="h-4" />
             <ToolTip content="Undo">
@@ -748,7 +760,7 @@ const PresentationHeader = ({
         </div>
       </div>
       <Dialog
-        open={isRegenerateConfirmOpen}
+        open={isRegenerateConfirmOpen && canRegenerate}
         onOpenChange={setIsRegenerateConfirmOpen}
       >
         <DialogContent className="w-[360px] rounded-2xl border-0 p-0 shadow-2xl sm:max-w-[360px]">
@@ -777,6 +789,7 @@ const PresentationHeader = ({
               type="button"
               variant="ghost"
               onClick={handleReGenerate}
+              disabled={!canRegenerate}
               className="h-auto flex-1 rounded-none rounded-br-2xl border-l border-gray-100 px-4 py-3.5 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600"
             >
               Regenerate
