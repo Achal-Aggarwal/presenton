@@ -28,7 +28,7 @@ const DEFAULT_CHART_INSERT_POSITION = { x: 128, y: 115 };
 const DEFAULT_CHART_INSERT_SIZE = { width: 717, height: 410 };
 const DEFAULT_INFOGRAPHIC_INSERT_POSITION = { x: 128, y: 170 };
 const DEFAULT_IMAGE_PLACEHOLDER_SRC =
-  "/figma/presentation-actions/image-placeholder.png";
+  "/figma/presentation-actions/image-placeholder.svg";
 const IMAGE_PREVIEW_ASSETS = [
   DEFAULT_IMAGE_PLACEHOLDER_SRC,
   DEFAULT_IMAGE_PLACEHOLDER_SRC,
