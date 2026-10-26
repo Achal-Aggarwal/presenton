@@ -41,6 +41,7 @@ from models.presentation_with_slides import (
     PresentationWithSlides,
 )
 from services.documents_loader import DocumentsLoader
+from services.provider_settings import get_provider_settings
 from services.chat.slide_ui_helpers import _normalize_generated_image_fit
 from services.temp_file_service import TEMP_FILE_SERVICE
 from services.webhook_service import WebhookService
@@ -1608,6 +1609,33 @@ async def duplicate_presentation(
         **_presentation_response_data(new_presentation),
         slides=new_slides,
     )
+
+
+@PRESENTATION_ROUTER.post("/{id}/regenerate", status_code=204)
+async def regenerate_smart_presentation(
+    id: uuid.UUID, sql_session: AsyncSession = Depends(get_async_session)
+):
+    presentation = await sql_session.get(PresentationModel, id)
+    if not presentation:
+        raise HTTPException(404, "Presentation not found")
+    settings = await get_provider_settings(sql_session)
+    if settings.get("LLM") == "presenton":
+        raise HTTPException(400, "Presenton Cloud does not support regeneration")
+    if (
+        presentation.generation_mode != "smart"
+        or not _presentation_response_data(presentation)["can_regenerate"]
+    ):
+        raise HTTPException(400, "A generated Smart presentation is required")
+
+    # Reset only on an explicit regeneration request. SSE reconnects must
+    # continue using saved checkpoints instead of restarting generation.
+    await sql_session.execute(
+        delete(SlideModel).where(
+            SlideModel.presentation == id,
+            SlideModel.owner_id == get_current_owner_id(),
+        )
+    )
+    await sql_session.commit()
 
 
 @PRESENTATION_ROUTER.post("/{id}/export", response_model=PresentationPathAndEditPath)

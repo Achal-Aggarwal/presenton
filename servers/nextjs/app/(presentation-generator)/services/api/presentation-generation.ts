@@ -21,6 +21,14 @@ export type BlankPresentationResponse = {
 };
 
 export class PresentationGenerationApi {
+  static async regenerateSmartPresentation(id: string): Promise<void> {
+    const response = await fetch(
+      getApiUrl(`/api/v1/ppt/presentation/${id}/regenerate`),
+      { method: "POST", headers: getHeader() }
+    );
+    await ApiResponseHandler.handleResponse(response, "Failed to regenerate presentation");
+  }
+
   static async uploadDoc(documents: File[]) {
     const formData = new FormData();
 

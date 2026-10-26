@@ -55,6 +55,7 @@ import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { sanitizeAnalyticsError } from "@/utils/analytics";
 import { v4 as uuidv4 } from "uuid";
 import StreamingGenerationMetrics from "./StreamingGenerationMetrics";
+import { PresentationGenerationApi } from "../../services/api/presentation-generation";
 
 const MAX_EXPORT_TITLE_LENGTH = 40;
 
@@ -110,6 +111,7 @@ const PresentationHeader = ({
   const [isExporting, setIsExporting] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
   /** Avoid committing on blur when Save/Cancel was used (focus/click ordering) */
@@ -125,7 +127,7 @@ const PresentationHeader = ({
     generationMetrics,
   } = useSelector((state: RootState) => state.presentationGeneration);
   const { onUndo, onRedo, canUndo, canRedo } = usePresentationUndoRedo();
-  const canRegenerate = presentationData?.can_regenerate === true && !isStreaming;
+  const canRegenerate = presentationData?.can_regenerate === true && !isStreaming && !isRegenerating;
 
   useEffect(() => {
     if (isEditingTitle) {
@@ -383,30 +385,43 @@ const PresentationHeader = ({
       setIsExporting(false);
     }
   };
-  const handleReGenerate = () => {
+  const handleReGenerate = async () => {
     if (!canRegenerate) return;
-    setIsRegenerateConfirmOpen(false);
-    dispatch(clearPresentationData());
-    dispatch(clearHistory());
-    trackEvent(MixpanelEvent.Presentation_Regenerated, {
-      pathname,
-      presentation_id,
-      slide_count: presentationData?.slides?.length || 0,
-      generation_mode: generationMode,
-    });
-    if (generationMode === "smart") {
-      trackEvent(MixpanelEvent.Smart_Mode_Generation_Started, {
+    setIsRegenerating(true);
+    try {
+      if (generationMode === "smart") {
+        await PresentationGenerationApi.regenerateSmartPresentation(presentation_id);
+      }
+      setIsRegenerateConfirmOpen(false);
+      dispatch(clearPresentationData());
+      dispatch(clearHistory());
+      trackEvent(MixpanelEvent.Presentation_Regenerated, {
         pathname,
         presentation_id,
         slide_count: presentationData?.slides?.length || 0,
-        source: "regenerate",
+        generation_mode: generationMode,
       });
+      if (generationMode === "smart") {
+        trackEvent(MixpanelEvent.Smart_Mode_Generation_Started, {
+          pathname,
+          presentation_id,
+          slide_count: presentationData?.slides?.length || 0,
+          source: "regenerate",
+        });
+      }
+      router.push(
+        `/presentation?id=${presentation_id}&stream=true${
+          generationMode === "smart" ? "&type=smart" : ""
+        }`
+      );
+    } catch (error) {
+      notify.error(
+        "Regeneration failed",
+        error instanceof Error ? error.message : "Please try again."
+      );
+    } finally {
+      setIsRegenerating(false);
     }
-    router.push(
-      `/presentation?id=${presentation_id}&stream=true${
-        generationMode === "smart" ? "&type=smart" : ""
-      }`
-    );
   };
   const downloadLink = (path: string, fileName: string) => {
     const link = document.createElement("a");
