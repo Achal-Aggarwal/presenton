@@ -598,12 +598,17 @@ function DiscoverControls({
       <div className="flex h-[41px] flex-none gap-2.5" aria-label={`Search ${providerLabel}`}>
         <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-[8px] border border-[rgba(219,219,219,0.6)] bg-white px-2.5">
           <Search className="size-3.5 flex-none" strokeWidth={1.8} aria-hidden="true" />
-          <textarea
+          <input
+            type="search"
+            aria-label="Search images"
             autoFocus
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && canRun) onRun();
+              if (event.key === "Enter" && canRun) {
+                event.preventDefault();
+                onRun();
+              }
             }}
             placeholder="Search Image"
             className="h-full min-w-0 flex-1 bg-transparent text-[14px] font-normal outline-none placeholder:text-[#999]"

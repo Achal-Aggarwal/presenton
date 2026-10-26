@@ -39,6 +39,8 @@ function Harness({ adapter }: { adapter: ChatApiAdapter }) {
 }
 
 function submitBlankPrompt(prompt: string) {
+  // StrictMode can defer the initial commit until after cy.mount resolves.
+  cy.get('[aria-label="Editor tools"]').should("be.visible");
   cy.window().then((window) => {
     window.dispatchEvent(new window.CustomEvent(PRESENTON_BLANK_SLIDE_PROMPT_EVENT, {
       detail: { prompt, slideIndex: 1, promptKind: "blank" },
