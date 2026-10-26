@@ -549,6 +549,7 @@ const Chat = ({
   >(null);
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const suggestedPromptsRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -576,6 +577,33 @@ const Chat = ({
     changeCount: number;
   } | null>(null);
   const activeResourceId = resourceId ?? presentationId;
+
+  useEffect(() => {
+    const row = suggestedPromptsRef.current;
+    if (!row) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (
+        event.defaultPrevented || event.ctrlKey || event.metaKey ||
+        Math.abs(event.deltaY) <= Math.abs(event.deltaX)
+      ) return;
+
+      const multiplier = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? row.clientWidth : 1;
+      const nextLeft = Math.min(
+        Math.max(row.scrollLeft + event.deltaY * multiplier, 0),
+        row.scrollWidth - row.clientWidth,
+      );
+      if (nextLeft === row.scrollLeft || nextLeft < 0) return;
+
+      event.preventDefault();
+      row.scrollLeft = nextLeft;
+    };
+
+    row.addEventListener("wheel", handleWheel, { passive: false });
+    return () => row.removeEventListener("wheel", handleWheel);
+  }, [useEditorLayout, variant]);
 
   const baseAnalyticsProps = useCallback(
     () => ({
@@ -2771,7 +2799,12 @@ const Chat = ({
             </div>
           </form>
 
-          <div className="flex h-[28px] w-full gap-2 overflow-hidden">
+          <div
+            ref={suggestedPromptsRef}
+            role="group"
+            aria-label="Suggested prompts"
+            className="flex min-h-[34px] w-full min-w-0 gap-2 overflow-x-auto overflow-y-hidden px-0.5 py-0.5 [scrollbar-color:#D7D9DF_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#D7D9DF] [&::-webkit-scrollbar-track]:bg-transparent"
+          >
             {(isOutlineVariant
               ? outlineEditorQuickPrompts
               : editorQuickPrompts
@@ -2780,7 +2813,7 @@ const Chat = ({
                 key={prompt}
                 type="button"
                 onClick={() => applyPrompt(prompt)}
-                className="h-[28px] shrink-0 rounded-full border-[1.345px] border-[#F4F4F4] bg-[#F9FAFB] px-3 font-syne text-xs font-medium leading-5 tracking-[0.16px] text-[#666666] transition-colors hover:border-[#D9D6FE] hover:bg-[#FAFAFF]"
+                className="h-[28px] shrink-0 whitespace-nowrap rounded-full border-[1.345px] border-[#F4F4F4] bg-[#F9FAFB] px-3 font-syne text-xs font-medium leading-5 tracking-[0.16px] text-[#666666] transition-colors hover:border-[#D9D6FE] hover:bg-[#FAFAFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7A5AF8]"
               >
                 {prompt}
               </button>
