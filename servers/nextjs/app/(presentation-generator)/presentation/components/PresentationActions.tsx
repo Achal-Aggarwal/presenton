@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useReducer, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   AlignCenter,
   AreaChart,
@@ -86,6 +86,11 @@ import {
   type TemplateV2SurfaceSelectedDetail,
 } from "@/components/slide-editor/events/events";
 import Chat from "./Chat";
+import {
+  PRESENTON_BLANK_SLIDE_PROMPT_EVENT,
+  type BlankSlidePromptEventDetail,
+  type BlankSlidePromptRequest,
+} from "../../_shared/blank-slide-prompt-event";
 import TemplateService from "../../services/api/template";
 import { TemplateV2HtmlSlidePreview } from "../../components/TemplateV2HtmlSlidePreview";
 import { isTemplateFreePresentation } from "../../_shared/blank-slide";
@@ -2120,6 +2125,35 @@ const PresentationActions = (props: PresentationActionsProps) => {
     presentationActionsUiReducer,
     initialPresentationActionsUiState,
   );
+  const nextBlankPromptId = useRef(0);
+  const [blankSlidePromptRequest, setBlankSlidePromptRequest] =
+    useState<BlankSlidePromptRequest | null>(null);
+
+  useEffect(() => {
+    if (props.variant !== "template-v2" || aiOnly) return;
+
+    const handleBlankSlidePrompt = (event: Event) => {
+      const detail = (event as CustomEvent<BlankSlidePromptEventDetail>).detail;
+      if (typeof detail?.prompt !== "string" || !detail.prompt.trim()) return;
+
+      nextBlankPromptId.current += 1;
+      setBlankSlidePromptRequest({ id: nextBlankPromptId.current, detail });
+      dispatchUiState({ type: "selectAction", activeAction: "ai" });
+      onPanelOpenChange(true);
+    };
+
+    window.addEventListener(PRESENTON_BLANK_SLIDE_PROMPT_EVENT, handleBlankSlidePrompt);
+    return () =>
+      window.removeEventListener(PRESENTON_BLANK_SLIDE_PROMPT_EVENT, handleBlankSlidePrompt);
+  }, [aiOnly, onPanelOpenChange, props.variant]);
+
+  useEffect(() => {
+    setBlankSlidePromptRequest(null);
+  }, [props.presentationId]);
+
+  const handleBlankSlidePromptConsumed = useCallback((id: number) => {
+    setBlankSlidePromptRequest((current) => current?.id === id ? null : current);
+  }, []);
   const [templateV2SelectionContext, setTemplateV2SelectionContext] = useState<{
     slideIndex: number | null;
     target: TemplateV2SurfaceSelectedDetail["selection"];
@@ -2413,6 +2447,8 @@ const PresentationActions = (props: PresentationActionsProps) => {
           blocksUnavailable={blocksUnavailable}
           chatProps={{
             ...chatProps,
+            blankSlidePromptRequest,
+            onBlankSlidePromptConsumed: handleBlankSlidePromptConsumed,
             currentSlide: chatSlide,
             selectedTemplateV2Target,
             onClearChatSlideReference:

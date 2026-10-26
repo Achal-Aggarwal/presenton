@@ -227,9 +227,17 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
 
   const closeMobileAssistant = useCallback(() => {
     setIsMobileAssistantOpen(false);
+    setIsRightPanelOpen(false);
     window.requestAnimationFrame(() => {
       mobileAssistantTriggerRef.current?.focus();
     });
+  }, []);
+
+  const handleActionsPanelOpenChange = useCallback((open: boolean) => {
+    setIsRightPanelOpen(open);
+    if (!window.matchMedia("(min-width: 1280px)").matches) {
+      setIsMobileAssistantOpen(open);
+    }
   }, []);
 
   useEffect(() => {
@@ -1034,7 +1042,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
                 onAgentSlideFocus={handleAgentSlideFocus}
                 editingDisabled={editingDisabled}
                 panelOpen={isMobileAssistantOpen || isRightPanelOpen}
-                onPanelOpenChange={setIsRightPanelOpen}
+                onPanelOpenChange={handleActionsPanelOpenChange}
               />
             </div>
           </div>

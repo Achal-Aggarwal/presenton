@@ -33,10 +33,6 @@ import { useDispatch, useSelector } from "react-redux";
 import MarkdownRenderer from "@/components/MarkDownRender";
 import { ImagesApi } from "../../services/api/images";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
-import {
-  PRESENTON_BLANK_SLIDE_PROMPT_EVENT,
-  type BlankSlidePromptEventDetail,
-} from "../../_shared/blank-slide-prompt-event";
 import type {
   ChatConversationSummary,
   ChatHistoryMessage,
@@ -496,6 +492,8 @@ const Chat = ({
   onAgentSlideFocus,
   onChatSendingStateChange,
   onFollowModeChange,
+  blankSlidePromptRequest,
+  onBlankSlidePromptConsumed,
 }: ChatProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const llmConfig = useSelector(
@@ -520,6 +518,7 @@ const Chat = ({
     string | null
   >(null);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [hasLoadedInitialHistory, setHasLoadedInitialHistory] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isFollowAgentEnabled, setIsFollowAgentEnabled] = useState(true);
   const [hasChatMutationStarted, setHasChatMutationStarted] = useState(false);
@@ -558,6 +557,7 @@ const Chat = ({
   >(
     async () => undefined,
   );
+  const handledBlankPromptRequestId = useRef<number | null>(null);
   const lastFollowedTraceRef = useRef<string | null>(null);
   const focusEventSequenceRef = useRef(0);
   const activeFocusedSlideRef = useRef<number | null>(null);
@@ -597,6 +597,7 @@ const Chat = ({
 
   useEffect(() => {
     let cancelled = false;
+    setHasLoadedInitialHistory(false);
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setMessages([]);
@@ -772,6 +773,7 @@ const Chat = ({
       } finally {
         if (!cancelled) {
           setIsHistoryLoading(false);
+          setHasLoadedInitialHistory(true);
         }
       }
     };
@@ -1985,52 +1987,59 @@ const Chat = ({
   });
 
   useEffect(() => {
-    if (variant !== "template-v2" || typeof window === "undefined") return;
+    if (
+      variant !== "template-v2" ||
+      !blankSlidePromptRequest ||
+      !hasLoadedInitialHistory ||
+      chatInputDisabled ||
+      isUploadingPastedImage ||
+      !activeResourceId ||
+      handledBlankPromptRequestId.current === blankSlidePromptRequest.id
+    ) {
+      return;
+    }
 
-    const handleBlankSlidePrompt = (event: Event) => {
-      const detail = (event as CustomEvent<BlankSlidePromptEventDetail>).detail;
-      const prompt = typeof detail?.prompt === "string" ? detail.prompt.trim() : "";
-      if (!prompt) return;
+    handledBlankPromptRequestId.current = blankSlidePromptRequest.id;
+    onBlankSlidePromptConsumed?.(blankSlidePromptRequest.id);
+    const detail = blankSlidePromptRequest.detail;
+    const prompt = typeof detail.prompt === "string" ? detail.prompt.trim() : "";
+    if (!prompt) return;
 
-      const target =
-        typeof detail.slideIndex === "number"
-          ? `slide ${detail.slideIndex + 1}`
-          : "the current blank slide";
-      const layoutReference =
-        typeof detail.layoutId === "string" && detail.layoutId.trim()
-          ? ` (layout id: ${detail.layoutId.trim()})`
-          : "";
-      const instruction =
-        detail.promptKind === "layout"
-          ? `Fill the existing selected ${target} using its selected layout${layoutReference} as the layout reference. Preserve the layout structure and update this slide; do not add another slide.`
-          : `Create content on the existing selected ${target}. Update this slide; do not add another slide.`;
-      if (typeof detail.slideIndex === "number") {
-        setHiddenOverlaySlideReference(detail.slideIndex);
-      }
-      void submitMessageRef.current(prompt, {
-        backendContext: instruction,
-        layoutPreview:
-          detail.promptKind === "layout" && detail.layout
-            ? {
-              layout: detail.layout,
-              layoutId: detail.layoutId,
-              slideIndex: detail.slideIndex,
-            }
-            : undefined,
-      });
-    };
-
-    window.addEventListener(
-      PRESENTON_BLANK_SLIDE_PROMPT_EVENT,
-      handleBlankSlidePrompt,
-    );
-    return () => {
-      window.removeEventListener(
-        PRESENTON_BLANK_SLIDE_PROMPT_EVENT,
-        handleBlankSlidePrompt,
-      );
-    };
-  }, [variant]);
+    const target =
+      typeof detail.slideIndex === "number"
+        ? `slide ${detail.slideIndex + 1}`
+        : "the current blank slide";
+    const layoutReference =
+      typeof detail.layoutId === "string" && detail.layoutId.trim()
+        ? ` (layout id: ${detail.layoutId.trim()})`
+        : "";
+    const instruction =
+      detail.promptKind === "layout"
+        ? `Fill the existing selected ${target} using its selected layout${layoutReference} as the layout reference. Preserve the layout structure and update this slide; do not add another slide.`
+        : `Create content on the existing selected ${target}. Update this slide; do not add another slide.`;
+    if (typeof detail.slideIndex === "number") {
+      setHiddenOverlaySlideReference(detail.slideIndex);
+    }
+    void submitMessageRef.current(prompt, {
+      backendContext: instruction,
+      layoutPreview:
+        detail.promptKind === "layout" && detail.layout
+          ? {
+            layout: detail.layout,
+            layoutId: detail.layoutId,
+            slideIndex: detail.slideIndex,
+          }
+          : undefined,
+    });
+  }, [
+    activeResourceId,
+    blankSlidePromptRequest,
+    chatInputDisabled,
+    hasLoadedInitialHistory,
+    isUploadingPastedImage,
+    onBlankSlidePromptConsumed,
+    variant,
+  ]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
