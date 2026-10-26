@@ -84,10 +84,9 @@ export default function CommunityReferencePicker({
     <section className="w-full font-manrope" data-testid="design-grid">
       <CommunityDesignPreviewDialog presentation={preview} open={Boolean(preview)} loading={false} onOpenChange={(open) => { if (!open) setPreview(null); }} onUseDesign={(presentation) => { onSelect(presentation); setPreview(null); }} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <nav aria-label="Design library" className="inline-flex h-10 w-[200px] shrink-0 items-center rounded-lg border border-[#EDEEEF] bg-white p-1 text-xs font-medium text-[#191919]">
-          <span aria-current="page" className="flex h-8 flex-1 items-center justify-center rounded-lg bg-[#F6F6F9]">Community</span>
-          <Link href="/dashboard" className="flex h-8 flex-1 items-center justify-center rounded-lg hover:bg-[#F6F6F9]">My Designs</Link>
-        </nav>
+        <h2 className="shrink-0 text-base font-medium text-[#191919]">
+          Community
+        </h2>
         <div className="flex flex-wrap items-center gap-5">
           <label className="flex h-[38px] w-full items-center gap-2.5 rounded-md border border-[#EDEEEF] bg-white px-2.5 sm:w-[298px]">
             <Search className="h-4 w-4 shrink-0 text-[#808080]" strokeWidth={1.75} />
