@@ -14,6 +14,7 @@ import {
 } from "../../services/api/community";
 import CommunityDesignPreviewDialog from "../../(dashboard)/community/components/CommunityDesignPreviewDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { notify } from "@/components/ui/sonner";
 
 export default function CommunityReferencePicker({
   selectedId,
@@ -29,8 +30,38 @@ export default function CommunityReferencePicker({
   const searchRef = useRef<HTMLInputElement>(null);
   const [filters] = useState<CommunityPresentationListFilters>({});
   const [preview, setPreview] = useState<CommunityPresentation | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<CommunityErrorState | null>(null);
+  const previewId = preview?.id;
+
+  useEffect(() => {
+    if (previewId === undefined) {
+      setPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewLoading(true);
+    CommunityPresentationApi.getById(previewId)
+      .then((presentation) => {
+        if (!cancelled) setPreview(presentation);
+      })
+      .catch((previewError: unknown) => {
+        if (cancelled) return;
+        notify.error(
+          "Could not load the complete preview",
+          previewError instanceof Error ? previewError.message : undefined,
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewId]);
 
   const load = useCallback((signal?: AbortSignal) => {
     setLoading(true);
@@ -82,7 +113,7 @@ export default function CommunityReferencePicker({
 
   return (
     <section className="w-full font-manrope" data-testid="design-grid">
-      <CommunityDesignPreviewDialog presentation={preview} open={Boolean(preview)} loading={false} onOpenChange={(open) => { if (!open) setPreview(null); }} onUseDesign={(presentation) => { onSelect(presentation); setPreview(null); }} />
+      <CommunityDesignPreviewDialog presentation={preview} open={Boolean(preview)} loading={previewLoading} onOpenChange={(open) => { if (!open) setPreview(null); }} onUseDesign={(presentation) => { onSelect(presentation); setPreview(null); }} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="shrink-0 text-base font-medium text-[#191919]">
           Community
