@@ -184,6 +184,7 @@ export default function CommunityReferencePicker({
                 >
                   {preview ? (
                     <SmartHtmlSlide
+                      showLoader
                       executeScripts={false}
                       html={preview}
                       fonts={item.fonts}
