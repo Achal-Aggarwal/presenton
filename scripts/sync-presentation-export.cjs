@@ -269,21 +269,39 @@ function installRuntime(version, archivePath) {
       2,
     )}\n`,
   );
-  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-  execFileSync(
-    npm,
-    [
-      "install",
-      "--omit=dev",
-      "--ignore-scripts",
-      "--no-package-lock",
-      "--no-fund",
-      "--no-audit",
-      "--cache",
-      path.join(cacheDir, "npm"),
-    ],
-    { cwd: targetRoot, stdio: "inherit" },
-  );
+  const npmArgs = [
+    "install",
+    "--omit=dev",
+    "--ignore-scripts",
+    "--no-package-lock",
+    "--no-fund",
+    "--no-audit",
+    "--cache",
+    path.join(cacheDir, "npm"),
+  ];
+  const npmCli = String(process.env.npm_execpath || "");
+  if (
+    process.platform === "win32" &&
+    /^npm-cli\.(?:c?js)$/i.test(path.basename(npmCli)) &&
+    fs.existsSync(npmCli)
+  ) {
+    // Recent Node.js releases reject direct execution of .cmd shims with EINVAL.
+    execFileSync(process.execPath, [npmCli, ...npmArgs], {
+      cwd: targetRoot,
+      stdio: "inherit",
+    });
+  } else if (process.platform === "win32") {
+    execFileSync(
+      process.env.ComSpec || "cmd.exe",
+      ["/d", "/s", "/c", "npm", ...npmArgs],
+      {
+        cwd: targetRoot,
+        stdio: "inherit",
+      },
+    );
+  } else {
+    execFileSync("npm", npmArgs, { cwd: targetRoot, stdio: "inherit" });
+  }
   fs.writeFileSync(
     versionManifestPath,
     `${JSON.stringify(

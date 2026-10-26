@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse, unquote
@@ -143,9 +144,14 @@ def resolve_app_path_to_filesystem(path_or_url: str) -> Optional[str]:
 
     if path.startswith("/vendor/fonts/"):
         relative = path.lstrip("/")
-        nextjs_public_root = (
-            Path(__file__).resolve().parents[2] / "nextjs" / "public"
+        # PyInstaller puts __file__ under fastapi/_internal, while Electron
+        # bundles Next.js beside the fastapi executable's directory.
+        servers_root = (
+            Path(sys.executable).resolve().parent.parent
+            if getattr(sys, "frozen", False)
+            else Path(__file__).resolve().parents[2]
         )
+        nextjs_public_root = servers_root / "nextjs" / "public"
         return _existing_file_within(
             os.path.join(nextjs_public_root, relative),
             str(nextjs_public_root),
