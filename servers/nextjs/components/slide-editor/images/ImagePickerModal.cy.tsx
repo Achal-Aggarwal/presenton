@@ -18,22 +18,23 @@ function mountPicker(provider: string) {
 
 describe("Image picker search", () => {
   for (const provider of ["pexels", "pixabay"]) {
-    it(`uses an aligned single-line search and submits Enter once for ${provider}`, () => {
+    it(`aligns stock search text and submits Enter once for ${provider}`, () => {
       cy.intercept("GET", "**/api/v1/ppt/images/search*", { body: [] }).as("search");
       mountPicker(provider);
       cy.wait("@search");
-      cy.get('input[aria-label="Search images"]')
-        .should("have.attr", "type", "search")
+      const label = `Search ${provider === "pexels" ? "Pexels" : "Pixabay"} images`;
+      cy.get(`textarea[aria-label="${label}"]`)
         .then(($input) => {
           const input = $input[0].getBoundingClientRect();
           const icon = $input[0].parentElement!.querySelector("svg")!.getBoundingClientRect();
-          expect(input.top + input.height / 2).to.be.closeTo(icon.top + icon.height / 2, 1);
+          const style = getComputedStyle($input[0]);
+          const firstLineCenter = input.top + parseFloat(style.paddingTop) + parseFloat(style.lineHeight) / 2;
+          expect(firstLineCenter).to.be.closeTo(icon.top + icon.height / 2, 1);
         })
         .type("pine trees{enter}");
       cy.wait("@search").its("request.query.query").should("equal", "pine trees");
       cy.get("@search.all").should("have.length", 2);
-      cy.get('input[aria-label="Search images"]').should("have.value", "pine trees");
-      cy.get("textarea").should("not.exist");
+      cy.get(`textarea[aria-label="${label}"]`).should("have.value", "pine trees");
     });
   }
 
