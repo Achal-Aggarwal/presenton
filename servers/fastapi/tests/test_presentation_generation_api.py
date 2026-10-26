@@ -290,7 +290,7 @@ class TestPresentationGenerationAPI:
             )
         )
 
-        assert response == task
+        assert response == task.model_dump()
 
     def test_presentation_status_with_data_works_with_a_real_session(self):
         async def run():
@@ -330,9 +330,9 @@ class TestPresentationGenerationAPI:
 
         response, stored = asyncio.run(run())
 
-        assert response.id == stored.id
-        assert response.status == "pending"
-        assert response.data == {
+        assert response["id"] == stored.id
+        assert response["status"] == "pending"
+        assert response["data"] == {
             "created_slides": 1,
             "path": "https://presenton.example/app_data/deck.pptx",
         }
