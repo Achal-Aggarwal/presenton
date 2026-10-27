@@ -927,7 +927,7 @@ async def _prepare_template_source(
     operation: str,
 ) -> tuple[str, RawSlideLayouts, dict[str, Any], dict[str, str]]:
     LOGGER.info(
-        "[template.%s] request received pptx_url=%s slide_images=%d "
+        "[template.%s] request received pptx_url=%r slide_images=%d "
         "font_count=%d has_name=%s",
         operation,
         request.pptx_url,
@@ -939,7 +939,7 @@ async def _prepare_template_source(
     if not pptx_path or not os.path.isfile(pptx_path):
         LOGGER.warning(
             "[template.%s] rejected request; PPTX file not found "
-            "pptx_url=%s resolved_path=%s",
+            "pptx_url=%r resolved_path=%r",
             operation,
             request.pptx_url,
             pptx_path,
@@ -954,7 +954,7 @@ async def _prepare_template_source(
         )
 
     LOGGER.info(
-        "[template.%s] converting PPTX to JSON pptx_path=%s",
+        "[template.%s] converting PPTX to JSON pptx_path=%r",
         operation,
         pptx_path,
     )
@@ -966,7 +966,7 @@ async def _prepare_template_source(
     except ValidationError as exc:
         LOGGER.exception(
             "[template.%s] PPTX-to-JSON export produced invalid slide "
-            "layout JSON pptx_path=%s",
+            "layout JSON pptx_path=%r",
             operation,
             pptx_path,
         )
@@ -975,7 +975,7 @@ async def _prepare_template_source(
             detail="PPTX-to-JSON export produced invalid slide layout JSON",
         ) from exc
     LOGGER.info(
-        "[template.%s] PPTX-to-JSON validation complete pptx_path=%s "
+        "[template.%s] PPTX-to-JSON validation complete pptx_path=%r "
         "slides=%d",
         operation,
         pptx_path,
@@ -1300,7 +1300,7 @@ async def init_template(
         },
     )
     LOGGER.info(
-        "[template.init] persisting template name=%s slides=%d images=%d",
+        "[template.init] persisting template name=%r slides=%d images=%d",
         template.name,
         len(raw_layouts.layouts),
         len(template.assets.get("images", [])),
@@ -1309,7 +1309,7 @@ async def init_template(
     await sql_session.commit()
     await sql_session.refresh(template)
     LOGGER.info(
-        "[template.init] template persisted template_id=%s name=%s",
+        "[template.init] template persisted template_id=%s name=%r",
         template.id,
         template.name,
     )
@@ -1383,7 +1383,7 @@ async def _create_template_sync(
         generated_theme=generated_theme,
     )
     LOGGER.info(
-        "[template.create] persisting template name=%s slides=%d images=%d",
+        "[template.create] persisting template name=%r slides=%d images=%d",
         template.name,
         len(raw_layouts.layouts),
         len(template.assets.get("images", [])),
@@ -1392,7 +1392,7 @@ async def _create_template_sync(
     await sql_session.commit()
     await sql_session.refresh(template)
     LOGGER.info(
-        "[template.create] template persisted template_id=%s name=%s",
+        "[template.create] template persisted template_id=%s name=%r",
         template.id,
         template.name,
     )
@@ -1458,7 +1458,7 @@ async def _create_template_with_task_progress(
         generated_theme=generated_theme,
     )
     LOGGER.info(
-        "[template.create.async] persisting template task_id=%s name=%s "
+        "[template.create.async] persisting template task_id=%s name=%r "
         "slides=%d images=%d",
         task.id,
         template.name,
@@ -1470,7 +1470,7 @@ async def _create_template_with_task_progress(
     await sql_session.refresh(template)
     LOGGER.info(
         "[template.create.async] template persisted task_id=%s "
-        "template_id=%s name=%s",
+        "template_id=%s name=%r",
         task.id,
         template.id,
         template.name,
