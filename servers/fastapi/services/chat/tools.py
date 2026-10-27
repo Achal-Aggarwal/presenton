@@ -1561,11 +1561,14 @@ class ChatTools:
         if not text:
             return None
 
-        marker_match = re.search(r"\bdata\s*:\s*(?P<data>.+)$", text, re.IGNORECASE | re.DOTALL)
-        if marker_match:
+        marker_match = re.search(r"\bdata\s*:", text, re.IGNORECASE)
+        if marker_match and marker_match.end() < len(text):
             header_text = text[: marker_match.start()]
             headers = cls._extract_table_headers(header_text)
-            rows = cls._parse_table_rows(marker_match.group("data"))
+            data_text = text[marker_match.end():]
+            # Preserve the previous nonempty capture for whitespace-only input.
+            data_text = data_text.lstrip() or data_text[-1:]
+            rows = cls._parse_table_rows(data_text)
             if headers and rows:
                 normalized_rows = cls._align_table_rows(rows, len(headers))
                 if normalized_rows:

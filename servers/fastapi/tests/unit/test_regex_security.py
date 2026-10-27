@@ -112,3 +112,26 @@ def test_table_headers_bound_rejected_whitespace():
             value = marker + "\\n" * 100_000 + ". Data: a,b;c,d"
             assert ChatTools._extract_table_from_user_message(value) is None
     """)
+
+
+@pytest.mark.parametrize("whitespace", [" ", "\t", "\n", "\u00a0", "\u2003"])
+def test_table_data_marker_preserves_unicode_and_multiline_payloads(whitespace):
+    assert ChatTools._extract_table_from_user_message(
+        f"Headers Name, Age. dAtA{whitespace}:{whitespace}Ada, 36; Grace, 44"
+    ) == {"columns": ["Name", "Age"], "rows": [["Ada", "36"], ["Grace", "44"]]}
+
+
+def test_table_data_marker_preserves_context_whitespace_rows_and_empty_fallback():
+    assert ChatTools._extract_table_from_user_message(
+        "UI context: control\nUser message: Headers Name. Data:\u00a0"
+    ) == {"columns": ["Name"], "rows": [["\u00a0"]]}
+    assert ChatTools._extract_table_from_user_message("Headers Name. Data:") is None
+
+
+def test_table_data_marker_bounds_failed_markers_and_whitespace_payloads():
+    _run_bounded("""
+        from services.chat.tools import ChatTools
+        for value in ('data ' * 100000, 'data' + '\\u2003' * 100000,
+                      'Headers Name. Data:' + ' ' * 100000):
+            assert ChatTools._extract_table_from_user_message(value) is None
+    """)
