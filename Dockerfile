@@ -54,12 +54,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json /app/
+COPY package.json package-lock.json /app/
 
 RUN mkdir -p /app/document-extraction-liteparse \
-    && cd /app/document-extraction-liteparse \
-    && npm init -y \
-    && npm install @llamaindex/liteparse@1.5.2 --omit=dev
+    && cp /app/package.json /app/package-lock.json /app/document-extraction-liteparse/ \
+    && npm --prefix /app/document-extraction-liteparse ci --omit=dev
 
 COPY electron/resources/document-extraction/liteparse_runner.mjs /app/document-extraction-liteparse/liteparse_runner.mjs
 COPY scripts/sync-presentation-export.cjs /app/scripts/sync-presentation-export.cjs

@@ -34,6 +34,7 @@ const nextjsDir = join(__dirname, "servers/nextjs");
 const nextjsStandaloneServer = join(nextjsDir, "server.js");
 const nextjsCli = join(nextjsDir, "node_modules/next/dist/bin/next");
 const exportSyncScript = join(__dirname, "scripts/sync-presentation-export.cjs");
+const documentSyncScript = join(__dirname, "scripts/sync-document-dependencies.cjs");
 const nginxSourceConfigPath = join(__dirname, "nginx.conf");
 const nginxRuntimeConfigPath = "/etc/nginx/nginx.conf";
 
@@ -173,24 +174,24 @@ const writeUserConfig = (config) => {
 const setupNodeModules = () => {
   return new Promise((resolve, reject) => {
     console.log("Setting up node_modules for Next.js...");
-    const npmProcess = spawn("npm", ["install"], {
+    const npmProcess = spawn("npm", ["ci"], {
       cwd: nextjsDir,
       stdio: "inherit",
       env: process.env,
     });
 
     npmProcess.on("error", (err) => {
-      console.error("npm install failed:", err);
+      console.error("npm ci failed:", err);
       reject(err);
     });
 
     npmProcess.on("exit", (code) => {
       if (code === 0) {
-        console.log("npm install completed successfully");
+        console.log("npm ci completed successfully");
         resolve();
       } else {
-        console.error(`npm install failed with exit code: ${code}`);
-        reject(new Error(`npm install failed with exit code: ${code}`));
+        console.error(`npm ci failed with exit code: ${code}`);
+        reject(new Error(`npm ci failed with exit code: ${code}`));
       }
     });
   });
@@ -224,34 +225,8 @@ const runNodeScript = (scriptPath, scriptArgs) => {
   });
 };
 
-const canLoadSharp = () => {
-  const result = spawnSync(process.execPath, ["-e", "require('sharp')"], {
-    cwd: __dirname,
-    env: process.env,
-    encoding: "utf8",
-  });
-  return result.status === 0;
-};
-
 const ensurePresentationExportNodeDependencies = async () => {
-  if (canLoadSharp()) {
-    return;
-  }
-
-  console.warn(
-    "Sharp native dependency is missing for this container platform. Repairing root node_modules..."
-  );
-  await runCommand(
-    "npm",
-    ["install", "--include=optional", "--omit=dev", "--no-fund", "--no-audit"],
-    { cwd: __dirname }
-  );
-
-  if (!canLoadSharp()) {
-    throw new Error(
-      "Sharp still cannot be loaded after npm install. Recreate Docker volumes with `docker compose down -v` and rebuild the development service."
-    );
-  }
+  await runNodeScript(documentSyncScript, []);
 };
 
 const shouldSuppressStartupLogLine = (line) =>

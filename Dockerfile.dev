@@ -50,13 +50,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json /app/
-RUN npm --prefix /app install --omit=dev
-
-RUN mkdir -p /app/document-extraction-liteparse \
-    && cd /app/document-extraction-liteparse \
-    && npm init -y \
-    && npm install @llamaindex/liteparse@1.5.2 --omit=dev
-COPY electron/resources/document-extraction/liteparse_runner.mjs /app/document-extraction-liteparse/liteparse_runner.mjs
+COPY scripts/sync-document-dependencies.cjs /app/scripts/sync-document-dependencies.cjs
+COPY electron/resources/document-extraction/liteparse_runner.mjs /app/electron/resources/document-extraction/liteparse_runner.mjs
+RUN node /app/scripts/sync-document-dependencies.cjs
 
 COPY scripts/sync-presentation-export.cjs /app/scripts/sync-presentation-export.cjs
 COPY scripts/run-presentation-export.mjs /app/scripts/run-presentation-export.mjs
