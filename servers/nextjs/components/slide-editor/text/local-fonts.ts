@@ -613,7 +613,7 @@ function fontFamilyLoadDescriptors(family: string) {
 }
 
 function fontFamilyFromFontDescriptor(descriptor: string) {
-  const match = descriptor.match(/"((?:\\.|[^"])*)"\s*$/);
+  const match = descriptor.match(/"((?:\\.|[^"\\])*)"\s*$/);
   return match ? match[1].replace(/\\(["\\])/g, "$1") : null;
 }
 
