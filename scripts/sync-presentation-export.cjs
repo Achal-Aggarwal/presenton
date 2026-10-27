@@ -11,6 +11,7 @@ const path = require("path");
 const https = require("https");
 const http = require("http");
 const { execFileSync } = require("child_process");
+const { createRequire } = require("node:module");
 
 const repoRoot = path.join(__dirname, "..");
 const targetRoot = path.join(repoRoot, "presentation-export");
@@ -55,14 +56,37 @@ function packagePath(root, packageName) {
   return path.join(root, "node_modules", ...packageName.split("/"), "package.json");
 }
 
+function resolvedPackagePath(root, packageName, fromPackage = packagePath(root, "@presenton/export-core")) {
+  // Check the copy Node will load, including dependencies nested below the engine.
+  const boundary = path.resolve(root) + path.sep;
+  for (const directory of createRequire(fromPackage).resolve.paths(packageName) || []) {
+    const candidate = path.join(directory, ...packageName.split("/"), "package.json");
+    if (candidate.startsWith(boundary) && fs.existsSync(candidate)) return candidate;
+  }
+  return packagePath(root, packageName);
+}
+
+function versionAtLeast(version, minimum) {
+  if (!/^\d+\.\d+\.\d+$/.test(version || "")) return false;
+  const actual = version.split(".").map(Number);
+  const expected = minimum.split(".").map(Number);
+  for (let index = 0; index < 3; index++) {
+    if (actual[index] !== expected[index]) return actual[index] > expected[index];
+  }
+  return true;
+}
+
 function validateSharpRuntime(root, platformArch = getRuntimePlatformArch()) {
-  const sharpPackagePath = packagePath(root, "sharp");
+  const sharpPackagePath = resolvedPackagePath(root, "sharp");
   if (!fs.existsSync(sharpPackagePath)) {
     return { ok: false, reason: `Missing Sharp package: ${sharpPackagePath}` };
   }
 
   try {
     const sharpPackage = readJsonFile(sharpPackagePath);
+    if (!versionAtLeast(sharpPackage.version, "0.35.5")) {
+      return { ok: false, reason: `Sharp ${sharpPackage.version || "unknown"} requires security update to 0.35.5 or newer.` };
+    }
     const optionalDependencies = sharpPackage.optionalDependencies || {};
     const nativePackageName = `@img/sharp-${platformArch}`;
     const nativePackageVersion = optionalDependencies[nativePackageName];
@@ -85,7 +109,7 @@ function validateSharpRuntime(root, platformArch = getRuntimePlatformArch()) {
     }
 
     for (const dependency of requiredPackages) {
-      const dependencyPath = packagePath(root, dependency.name);
+      const dependencyPath = resolvedPackagePath(root, dependency.name, sharpPackagePath);
       if (!fs.existsSync(dependencyPath)) {
         return {
           ok: false,
@@ -104,6 +128,20 @@ function validateSharpRuntime(root, platformArch = getRuntimePlatformArch()) {
     return { ok: true, sharpVersion: sharpPackage.version };
   } catch (error) {
     return { ok: false, reason: `Invalid Sharp runtime: ${error.message}` };
+  }
+}
+
+function validateExportRuntime(root, platformArch = getRuntimePlatformArch()) {
+  const sharp = validateSharpRuntime(root, platformArch);
+  if (!sharp.ok) return sharp;
+  try {
+    const katex = readJsonFile(resolvedPackagePath(root, "katex"));
+    if (!versionAtLeast(katex.version, "0.18.2")) {
+      return { ok: false, reason: `KaTeX ${katex.version || "unknown"} requires security update to 0.18.2 or newer.` };
+    }
+    return { ...sharp, katexVersion: katex.version };
+  } catch (error) {
+    return { ok: false, reason: `Invalid KaTeX runtime: ${error.message}` };
   }
 }
 
@@ -235,7 +273,7 @@ function validateExistingRuntime(expectedVersion) {
         reason: `Expected ${assetNameForVersion(expectedVersion)}, found ${manifest.package || "an unknown package"}.`,
       };
     }
-    const sharpRuntime = validateSharpRuntime(targetRoot);
+    const sharpRuntime = validateExportRuntime(targetRoot);
     if (!sharpRuntime.ok) {
       return sharpRuntime;
     }
@@ -264,6 +302,7 @@ function installRuntime(version, archivePath) {
         private: true,
         type: "module",
         dependencies: { "@presenton/export-core": `file:${archivePath}` },
+        overrides: { sharp: "0.35.5", katex: "0.18.10" },
       },
       null,
       2,
@@ -343,4 +382,5 @@ module.exports = {
   clearDirectoryContents,
   getRuntimePlatformArch,
   validateSharpRuntime,
+  validateExportRuntime,
 };
