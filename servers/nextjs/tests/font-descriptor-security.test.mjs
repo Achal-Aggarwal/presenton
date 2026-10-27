@@ -29,6 +29,16 @@ test("font descriptors reject unterminated escaped runs without exponential back
   assert.equal(probe.status, 0, String(probe.error || probe.stderr));
 });
 
+test("font descriptors bound repeated escaped quote starts after a split family", () => {
+  const probe = spawnSync(process.execPath, ["-e", `
+    const fonts=require(process.argv[1]);
+    const descriptor='400 16px "'+String.fromCharCode(92,34).repeat(100000);
+    fonts.ensureLocalFontsForDescriptors([descriptor]);
+    fonts.ensureTemplateFontsForDescriptors([descriptor],[{family:'Control',sourceUrl:'/control.ttf'}]);
+  `, bundle], { encoding: "utf8", timeout: 2000 });
+  assert.equal(probe.status, 0, String(probe.error || probe.stderr));
+});
+
 test("template descriptors preserve quoted, escaped and Unicode font families", async () => {
   const previousDocument = globalThis.document;
   const addedStyles = [];
@@ -40,7 +50,7 @@ test("template descriptors preserve quoted, escaped and Unicode font families", 
   try {
     for (const family of ['Manrope', 'Font "quoted"', 'Path\\Face', '日本語 Font']) {
       const escaped = family.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      const loads = fonts.ensureTemplateFontsForDescriptors([`700 16px "${escaped}"`], [{ family, sourceUrl: "/control.ttf" }]);
+      const loads = fonts.ensureTemplateFontsForDescriptors([`italic 700 16px "${escaped}"`], [{ family, sourceUrl: "/control.ttf" }]);
       assert.equal(loads.length, 1, family);
       await Promise.all(loads);
     }
