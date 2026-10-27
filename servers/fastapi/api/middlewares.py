@@ -104,10 +104,12 @@ class SessionAuthMiddleware(BaseHTTPMiddleware):
                     path.startswith("/api/v1/ppt/fonts/")
                     and request.method in {"POST", "DELETE"}
                 )
-                or (
-                    path == "/api/v1/ppt/ollama/models/pull"
-                    and request.method == "POST"
-                )
+                or path in {
+                    "/api/v1/ppt/ollama/models/pull",
+                    "/api/v1/ppt/ollama/models/available",
+                    "/api/v1/ppt/openai/models/available",
+                    "/api/v1/ppt/openrouter/providers/available",
+                }
             )
             if admin_only and (principal.method != "jwt" or not principal.is_admin):
                 return JSONResponse(
