@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
 import Underline from "@tiptap/extension-underline";
@@ -13,6 +14,12 @@ import {
   Code,
 } from "lucide-react";
 
+const TIPTAP_TEXT_EXTENSIONS = [
+  StarterKit.configure({ underline: false, link: false, listKeymap: false, trailingNode: false }),
+  Markdown,
+  Underline,
+];
+const BUBBLE_MENU_OPTIONS = { placement: "top" as const };
 
 interface TiptapTextProps {
   content: string;
@@ -30,7 +37,7 @@ const TiptapText: React.FC<TiptapTextProps> = ({
   placeholder = "Enter text...",
 }) => {
   const editor = useEditor({
-    extensions: [StarterKit, Markdown, Underline],
+    extensions: TIPTAP_TEXT_EXTENSIONS,
     content: content || placeholder,
 
     editorProps: {
@@ -49,6 +56,7 @@ const TiptapText: React.FC<TiptapTextProps> = ({
     },
     editable: true,
     immediatelyRender: false,
+    shouldRerenderOnTransaction: true,
   });
 
   // Update editor content when content prop changes
@@ -57,7 +65,7 @@ const TiptapText: React.FC<TiptapTextProps> = ({
     // Compare against current plain text to avoid unnecessary updates
     const currentText = editor?.storage.markdown.getMarkdown();
     if ((content || "") !== currentText) {
-      editor.commands.setContent(content || "", false);
+      editor.commands.setContent(content || "", { emitUpdate: false });
     }
   }, [content, editor]);
 
@@ -72,7 +80,7 @@ const TiptapText: React.FC<TiptapTextProps> = ({
       <BubbleMenu
         editor={editor}
         className="z-50"
-        tippyOptions={{ duration: 100 }}
+        options={BUBBLE_MENU_OPTIONS}
       >
         <div
           style={{
