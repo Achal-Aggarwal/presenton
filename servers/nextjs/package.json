@@ -37,13 +37,13 @@
     "@reduxjs/toolkit": "^2.2.8",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-hotkeys": "^0.10.0",
-    "@tiptap/core": "3.30.4",
-    "@tiptap/extension-bubble-menu": "3.30.4",
-    "@tiptap/extension-floating-menu": "3.30.4",
-    "@tiptap/extension-underline": "3.30.4",
-    "@tiptap/pm": "3.30.4",
-    "@tiptap/react": "3.30.4",
-    "@tiptap/starter-kit": "3.30.4",
+    "@tiptap/core": "3.30.5",
+    "@tiptap/extension-bubble-menu": "3.30.5",
+    "@tiptap/extension-floating-menu": "3.30.5",
+    "@tiptap/extension-underline": "3.30.5",
+    "@tiptap/pm": "3.30.5",
+    "@tiptap/react": "3.30.5",
+    "@tiptap/starter-kit": "3.30.5",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -93,7 +93,10 @@
       "katex": "^0.18.2"
     },
     "brace-expansion@^1.0.0": "1.1.21",
-    "brace-expansion@^2.0.0": "2.1.7"
+    "brace-expansion@^2.0.0": "2.1.7",
+    "@tailwindcss/typography": {
+      "postcss-selector-parser": "6.1.5"
+    }
   },
   "peerDependencies": {
     "zod": "^4.6.6"
