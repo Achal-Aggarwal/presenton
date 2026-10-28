@@ -413,14 +413,14 @@ account setup available so an admin can finish configuration in Settings.
 | **FIREWORKS_BASE_URL** | `https://api.fireworks.ai/inference/v1` (default) | Fireworks base URL. |
 | **TOGETHER_API_KEY** | Required for `LLM=together` | Together AI API key. |
 | **TOGETHER_MODEL** | For example `openai/gpt-oss-20b` | Together AI model. |
-| **TOGETHER_BASE_URL** | `https://api.together.ai/v1` (default) | Together AI base URL. |
+| **TOGETHER_BASE_URL** | `https://api.together.ai/v1` (default) | Together AI base URL. Model discovery requires a final HTTP(S) API base URL without a query or fragment and does not follow redirects. |
 | **CEREBRAS_API_KEY** | Required for `LLM=cerebras` | Cerebras API key. |
 | **CEREBRAS_MODEL** | `llama-3.3-70b` (default) | Cerebras model. |
 | **CEREBRAS_BASE_URL** | `https://api.cerebras.ai/v1` (default) | Cerebras base URL. |
 | **ANTHROPIC_API_KEY** | Required for `LLM=anthropic` | Anthropic API key. |
 | **ANTHROPIC_MODEL** | `claude-3-5-sonnet-20241022` (default) | Anthropic model. |
 | **CODEX_MODEL** | Required for `LLM=codex` | Codex model. The OAuth flow maps host port `1455` for its callback. |
-| **CUSTOM_LLM_URL** | Required for `LLM=custom` | OpenAI-compatible base URL. The server must implement `POST /v1/chat/completions`; a provider-specific completion endpoint is insufficient. |
+| **CUSTOM_LLM_URL** | Required for `LLM=custom` | OpenAI-compatible base URL. The server must implement `POST /v1/chat/completions`; a provider-specific completion endpoint is insufficient. Model discovery supports local servers and proxy prefixes, requires a URL without a query or fragment, and does not follow redirects. |
 | **CUSTOM_LLM_API_KEY** | Provider-dependent | Custom-provider API key. |
 | **CUSTOM_MODEL** | Required for `LLM=custom` | Custom-provider model ID. |
 | **LITELLM_BASE_URL** | Required for `LLM=litellm` | LiteLLM proxy or gateway base URL. |
