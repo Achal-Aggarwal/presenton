@@ -376,6 +376,7 @@ account setup available so an admin can finish configuration in Settings.
 | **PRESENTON_PUBLIC_URL** | Optional URL | Browser-reachable Presenton origin, such as `http://localhost:5001` or `https://slides.example.com`. Generated download, edit, and preview links use this origin. |
 | **PRESENTATION_GENERATION_MODE** | `both` (default), `standard`, `smart` | Controls the modes available in the UI and MCP server. A single-mode value hides the selector; `smart` also hides template features. See the **[presentation generation modes guide](docs/presentation-generation-modes.md)**. |
 | **PRESENTON_COMMUNITY_ENABLED** | `true` (default), `false` | Controls the cloud-backed Community gallery and design references. Set to `false` for air-gapped deployments to hide the feature and prevent community API requests. |
+| **PRESENTON_COMMUNITY_API_URL** | `https://api.presenton.ai/api/v3/community/presentations` (default) | Community API base URL. Requests use the catalog or a positive presentation ID and do not follow redirects; configure the service's final API URL. |
 | **LLM** | `openai`, `deepseek`, `google`, `vertex`, `azure`, `bedrock`, `openrouter`, `fireworks`, `together`, `cerebras`, `anthropic`, `litellm`, `lmstudio`, `ollama`, `custom`, `codex` | Selects the text LLM provider. |
 | **OPENAI_API_KEY** | Required for `LLM=openai` | OpenAI API key. |
 | **OPENAI_MODEL** | `gpt-4.1` (default) | OpenAI model. |
@@ -452,7 +453,7 @@ Use when **LLM** is **ollama**:
 
 | Variable | Values / default | Purpose |
 | --- | --- | --- |
-| **OLLAMA_URL** | For example `http://host.docker.internal:11434` from Docker | Ollama HTTP API base URL. |
+| **OLLAMA_URL** | For example `http://host.docker.internal:11434` from Docker | Ollama HTTP API base URL. Local servers and proxy path prefixes are supported. Model discovery and downloads reject query/fragment URLs and redirects; configure the final API base URL. |
 | **OLLAMA_MODEL** | For example `llama3.2:3b` | Ollama model name. |
 | **START_OLLAMA** | `false` (default), `true` | Allows the container entrypoint (`start.js`) to install Ollama and run `ollama serve`. |
 
