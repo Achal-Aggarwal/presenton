@@ -170,7 +170,10 @@ def _existing_file_within(candidate: str, root: str) -> Optional[str]:
     try:
         resolved_candidate = os.path.realpath(candidate)
         resolved_root = os.path.realpath(root)
-        if os.path.commonpath([resolved_candidate, resolved_root]) != resolved_root:
+        # Compare canonical paths with a directory separator: sibling names
+        # such as images-other must never satisfy the images boundary.
+        prefix = resolved_root.rstrip(os.sep) + os.sep
+        if not resolved_candidate.startswith(prefix):
             return None
     except (OSError, ValueError):
         return None
