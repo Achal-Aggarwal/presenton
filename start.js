@@ -13,7 +13,6 @@ import {
   fsyncSync,
   mkdirSync,
   openSync,
-  readdirSync,
   readFileSync,
   renameSync,
   unlinkSync,
@@ -21,6 +20,7 @@ import {
 } from "fs";
 import { printPresentonStartupBanner } from "./scripts/presenton-terminal-banner.mjs";
 import userConfigEnv from "./scripts/user-config-env.cjs";
+import exportPermissions from "./scripts/export-permissions.cjs";
 
 const { buildUserConfigFromEnv, readUserConfigEnv } = userConfigEnv;
 
@@ -86,16 +86,7 @@ const ensureReadableDirectory = (dirPath) => {
 };
 
 const ensureReadableExportFiles = (dirPath) => {
-  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
-    const entryPath = join(dirPath, entry.name);
-
-    if (entry.isDirectory()) {
-      chmodBestEffort(entryPath, appDataDirectoryMode);
-      ensureReadableExportFiles(entryPath);
-    } else if (entry.isFile()) {
-      chmodBestEffort(entryPath, 0o644);
-    }
-  }
+  exportPermissions.finalizeExportPermissions(dirPath, [appDataDirectory], { recursive: true, legacy: true });
 };
 
 const ensureAppDataDirectories = () => {
@@ -103,10 +94,15 @@ const ensureAppDataDirectories = () => {
   for (const dirPath of appDataStaticDirectories) {
     ensureReadableDirectory(dirPath);
   }
-  ensureReadableExportFiles(join(appDataDirectory, "exports"));
+  for (const name of ["exports", "pptx-to-html", "pptx-to-json"]) {
+    ensureReadableExportFiles(join(appDataDirectory, name));
+  }
 };
 
 ensureAppDataDirectories();
+for (const filename of [userConfigPath, userConfigBackupPath]) {
+  if (existsSync(filename)) chmodBestEffort(filename, 0o600);
+}
 
 const readJsonConfig = (filePath) => {
   try {
@@ -133,7 +129,7 @@ const copyUserConfigBackup = () => {
   try {
     if (readJsonConfig(userConfigPath)) {
       copyFileSync(userConfigPath, userConfigBackupPath);
-      chmodBestEffort(userConfigBackupPath, 0o644);
+      chmodBestEffort(userConfigBackupPath, 0o600);
     }
   } catch (error) {
     console.warn("Failed to update user config backup:", error);
@@ -145,7 +141,7 @@ const writeUserConfig = (config) => {
   copyUserConfigBackup();
 
   const tempPath = `${userConfigPath}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
-  const fd = openSync(tempPath, "w");
+  const fd = openSync(tempPath, "wx", 0o600);
   try {
     writeFileSync(fd, JSON.stringify(config), "utf8");
     fsyncSync(fd);
@@ -164,7 +160,7 @@ const writeUserConfig = (config) => {
     throw error;
   }
 
-  chmodBestEffort(userConfigPath, 0o644);
+  chmodBestEffort(userConfigPath, 0o600);
   if (!existsSync(userConfigBackupPath)) {
     copyUserConfigBackup();
   }

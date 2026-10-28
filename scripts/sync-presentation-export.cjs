@@ -24,6 +24,8 @@ const installedPackageJson = path.join(
   "package.json",
 );
 const sourceRunner = path.join(repoRoot, "scripts", "run-presentation-export.mjs");
+const sourcePermissions = path.join(repoRoot, "scripts", "export-permissions.cjs");
+const targetPermissions = path.join(targetRoot, "export-permissions.cjs");
 const versionManifestPath = path.join(targetRoot, "presenton-export-version.json");
 const packageJsonFile = path.join(repoRoot, "package.json");
 const cacheDir = path.join(repoRoot, ".cache", "presentation-export");
@@ -295,6 +297,7 @@ function installRuntime(version, archivePath) {
   // Removing a mount point fails with EBUSY; clearing its contents is portable.
   clearDirectoryContents(targetRoot);
   fs.copyFileSync(sourceRunner, targetRunner);
+  fs.copyFileSync(sourcePermissions, targetPermissions);
   fs.writeFileSync(
     path.join(targetRoot, "package.json"),
     `${JSON.stringify(
@@ -338,6 +341,7 @@ async function main() {
   const existing = validateExistingRuntime(version);
   if (checkOnly) {
     if (!existing.ok) throw new Error(existing.reason);
+    if (!fs.existsSync(targetPermissions)) throw new Error(`Missing export permissions helper: ${targetPermissions}`);
     console.log(`[presentation-export] OK (${existing.packageVersion})`);
     return;
   }
@@ -345,6 +349,7 @@ async function main() {
     // The package pin can stay unchanged while the application's auth/export
     // bridge changes. Refresh that bridge before Electron copies the runtime.
     fs.copyFileSync(sourceRunner, targetRunner);
+    fs.copyFileSync(sourcePermissions, targetPermissions);
     console.log(`[presentation-export] Using export-core ${existing.packageVersion}`);
     return;
   }

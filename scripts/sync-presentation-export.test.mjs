@@ -100,6 +100,7 @@ test("reusing a pinned export package refreshes its application runner", () => {
     fs.mkdirSync(scripts, { recursive: true });
     fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ presentationExportVersion: "v1.0.34" }));
     fs.copyFileSync(fileURLToPath(new URL("./sync-presentation-export.cjs", import.meta.url)), path.join(scripts, "sync-presentation-export.cjs"));
+    fs.copyFileSync(fileURLToPath(new URL("./export-permissions.cjs", import.meta.url)), path.join(scripts, "export-permissions.cjs"));
     const runner = fs.readFileSync(fileURLToPath(new URL("./run-presentation-export.mjs", import.meta.url)), "utf8");
     fs.writeFileSync(path.join(scripts, "run-presentation-export.mjs"), runner);
     writePackage(runtime, "@presenton/export-core", { version: "1.0.34" });
@@ -113,6 +114,7 @@ test("reusing a pinned export package refreshes its application runner", () => {
     const output = execFileSync(process.execPath, [path.join(scripts, "sync-presentation-export.cjs")], { encoding: "utf8", env: { ...process.env, EXPORT_RUNTIME_VERSION: "" } });
     assert.match(output, /Using export-core 1\.0\.34/);
     assert.equal(fs.readFileSync(path.join(runtime, "runner.mjs"), "utf8"), runner);
+    assert.ok(fs.existsSync(path.join(runtime, "export-permissions.cjs")));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
