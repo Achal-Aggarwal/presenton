@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url);
 const {
   getRuntimePlatformArch,
   validateSharpRuntime,
+  validateExportRuntime,
 } = require("./sync-presentation-export.cjs");
 
 function writePackage(root, packageName, packageJson) {
@@ -29,10 +30,10 @@ function writePackage(root, packageName, packageJson) {
 function makeSharpRuntime() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "presenton-sharp-runtime-"));
   writePackage(root, "sharp", {
-    version: "0.35.3",
+    version: "0.35.5",
     optionalDependencies: {
-      "@img/sharp-darwin-arm64": "0.35.3",
-      "@img/sharp-libvips-darwin-arm64": "1.3.2",
+      "@img/sharp-darwin-arm64": "0.35.5",
+      "@img/sharp-libvips-darwin-arm64": "1.3.4",
     },
   });
   return root;
@@ -57,7 +58,7 @@ test("validateSharpRuntime rejects a runtime missing the target native package",
   try {
     assert.deepEqual(validateSharpRuntime(root, "darwin-arm64"), {
       ok: false,
-      reason: "Missing @img/sharp-darwin-arm64 0.35.3 for darwin-arm64.",
+      reason: "Missing @img/sharp-darwin-arm64 0.35.5 for darwin-arm64.",
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -70,7 +71,7 @@ test("validateSharpRuntime rejects native packages from another Sharp release", 
     writePackage(root, "@img/sharp-darwin-arm64", { version: "0.34.5" });
     assert.deepEqual(validateSharpRuntime(root, "darwin-arm64"), {
       ok: false,
-      reason: "Expected @img/sharp-darwin-arm64 0.35.3, found 0.34.5.",
+      reason: "Expected @img/sharp-darwin-arm64 0.35.5, found 0.34.5.",
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -80,11 +81,11 @@ test("validateSharpRuntime rejects native packages from another Sharp release", 
 test("validateSharpRuntime accepts matching native and libvips packages", () => {
   const root = makeSharpRuntime();
   try {
-    writePackage(root, "@img/sharp-darwin-arm64", { version: "0.35.3" });
-    writePackage(root, "@img/sharp-libvips-darwin-arm64", { version: "1.3.2" });
+    writePackage(root, "@img/sharp-darwin-arm64", { version: "0.35.5" });
+    writePackage(root, "@img/sharp-libvips-darwin-arm64", { version: "1.3.4" });
     assert.deepEqual(validateSharpRuntime(root, "darwin-arm64"), {
       ok: true,
-      sharpVersion: "0.35.3",
+      sharpVersion: "0.35.5",
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -99,17 +100,42 @@ test("reusing a pinned export package refreshes its application runner", () => {
     fs.mkdirSync(scripts, { recursive: true });
     fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ presentationExportVersion: "v1.0.34" }));
     fs.copyFileSync(fileURLToPath(new URL("./sync-presentation-export.cjs", import.meta.url)), path.join(scripts, "sync-presentation-export.cjs"));
+    fs.copyFileSync(fileURLToPath(new URL("./export-permissions.cjs", import.meta.url)), path.join(scripts, "export-permissions.cjs"));
     const runner = fs.readFileSync(fileURLToPath(new URL("./run-presentation-export.mjs", import.meta.url)), "utf8");
     fs.writeFileSync(path.join(scripts, "run-presentation-export.mjs"), runner);
     writePackage(runtime, "@presenton/export-core", { version: "1.0.34" });
+    writePackage(runtime, "katex", { version: "0.18.10" });
     const platform = getRuntimePlatformArch();
     const native = `@img/sharp-${platform}`;
-    writePackage(runtime, "sharp", { version: "0.35.3", optionalDependencies: { [native]: "0.35.3" } });
-    writePackage(runtime, native, { version: "0.35.3" });
+    writePackage(runtime, "sharp", { version: "0.35.5", optionalDependencies: { [native]: "0.35.5" } });
+    writePackage(runtime, native, { version: "0.35.5" });
     fs.writeFileSync(path.join(runtime, "runner.mjs"), "// stale runner");
     fs.writeFileSync(path.join(runtime, "presenton-export-version.json"), JSON.stringify({ version: "v1.0.34", package: "presenton-export-core-opensource-1.0.34.tgz" }));
     const output = execFileSync(process.execPath, [path.join(scripts, "sync-presentation-export.cjs")], { encoding: "utf8", env: { ...process.env, EXPORT_RUNTIME_VERSION: "" } });
     assert.match(output, /Using export-core 1\.0\.34/);
     assert.equal(fs.readFileSync(path.join(runtime, "runner.mjs"), "utf8"), runner);
+    assert.ok(fs.existsSync(path.join(runtime, "export-permissions.cjs")));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("export validation rejects coherent vulnerable versions and nested engine copies", () => {
+  const root = makeSharpRuntime();
+  try {
+    writePackage(root, "@img/sharp-darwin-arm64", { version: "0.35.5" });
+    writePackage(root, "@img/sharp-libvips-darwin-arm64", { version: "1.3.4" });
+    writePackage(root, "@presenton/export-core", { version: "1.0.51" });
+    writePackage(root, "katex", { version: "0.16.47" });
+    assert.match(validateExportRuntime(root, "darwin-arm64").reason, /KaTeX.*security update/);
+    writePackage(root, "katex", { version: "0.18.10" });
+    assert.equal(validateExportRuntime(root, "darwin-arm64").ok, true);
+    const engine = path.join(root, "node_modules/@presenton/export-core");
+    writePackage(engine, "katex", { version: "0.16.47" });
+    assert.match(validateExportRuntime(root, "darwin-arm64").reason, /KaTeX.*security update/);
+    fs.rmSync(path.join(engine, "node_modules"), { recursive: true });
+    writePackage(engine, "sharp", { version: "0.35.3", optionalDependencies: { "@img/sharp-darwin-arm64": "0.35.3" } });
+    writePackage(engine, "@img/sharp-darwin-arm64", { version: "0.35.3" });
+    assert.match(validateExportRuntime(root, "darwin-arm64").reason, /Sharp.*security update/);
+    writePackage(engine, "sharp", { version: "0.35.5-beta.1" });
+    assert.equal(validateExportRuntime(root, "darwin-arm64").ok, false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

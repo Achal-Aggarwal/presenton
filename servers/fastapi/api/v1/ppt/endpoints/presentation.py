@@ -128,6 +128,7 @@ from utils.llm_calls.generate_smart_presentation import (
 )
 from utils.get_env import is_community_enabled
 import uuid
+from utils.safe_logging import safe_log, safe_log_exception
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +285,7 @@ async def _resolve_generation_layout(
                     "Restart the service to import bundled templates."
                 ),
             )
-        logger.info(
+        safe_log(logger, logging.INFO,
             "[presentation.generate] resolved bundled template alias "
             "name=%r template_id=%s",
             template_name,
@@ -1762,7 +1763,7 @@ async def create_presentation(
     await sql_session.commit()
 
     search_route, actual_search_provider = get_web_search_route()
-    logger.info(
+    safe_log(logger, logging.INFO,
         "Created presentation: id=%s web_search_enabled=%s selected_web_search_provider=%s "
         "web_search_route=%s actual_web_search_provider=%s",
         presentation_id,
@@ -2316,7 +2317,7 @@ async def stream_presentation(
         layout_count=len(layout.slides),
     )
     if structure.slides != original_structure:
-        logger.warning(
+        safe_log(logger, logging.WARNING,
             "Repairing invalid prepared presentation structure: "
             "presentation_id=%s old=%s new=%s",
             id,
@@ -2341,7 +2342,7 @@ async def stream_presentation(
             try:
                 await asset_task
             except Exception:
-                logger.exception(
+                safe_log_exception(logger,
                     "Slide asset generation failed: presentation_id=%s slide_index=%s",
                     id,
                     slide_index,
@@ -2866,7 +2867,7 @@ async def generate_presentation_handler(
         print("-" * 40)
         print(f"Generated {total_outlines} outlines for the presentation")
 
-        logger.info(
+        safe_log(logger, logging.INFO,
             "[presentation.generate] loading layout template=%r presentation_id=%s",
             request.template,
             presentation_id,
@@ -2877,7 +2878,7 @@ async def generate_presentation_handler(
             template_fonts,
             template_theme,
         ) = await _resolve_generation_layout(request.template, sql_session)
-        logger.info(
+        safe_log(logger, logging.INFO,
             "[presentation.generate] layout ready template=%r slides=%d ordered=%s icon_weight=%s",
             request.template,
             len(layout_model.slides),

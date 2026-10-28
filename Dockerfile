@@ -54,16 +54,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json /app/
+COPY package.json package-lock.json /app/
 
 RUN mkdir -p /app/document-extraction-liteparse \
-    && cd /app/document-extraction-liteparse \
-    && npm init -y \
-    && npm install @llamaindex/liteparse@1.5.2 --omit=dev
+    && cp /app/package.json /app/package-lock.json /app/document-extraction-liteparse/ \
+    && npm --prefix /app/document-extraction-liteparse ci --omit=dev
 
 COPY electron/resources/document-extraction/liteparse_runner.mjs /app/document-extraction-liteparse/liteparse_runner.mjs
 COPY scripts/sync-presentation-export.cjs /app/scripts/sync-presentation-export.cjs
 COPY scripts/run-presentation-export.mjs /app/scripts/run-presentation-export.mjs
+COPY scripts/export-permissions.cjs /app/scripts/export-permissions.cjs
 RUN rm -rf /app/presentation-export \
     && node /app/scripts/sync-presentation-export.cjs --force
 
@@ -132,6 +132,7 @@ COPY --from=assets-builder /app/package.json /app/package.json
 COPY --from=assets-builder /app/document-extraction-liteparse /app/document-extraction-liteparse
 COPY --from=assets-builder /app/presentation-export /app/presentation-export
 COPY --from=assets-builder /app/scripts/sync-presentation-export.cjs /app/scripts/sync-presentation-export.cjs
+COPY --from=assets-builder /app/scripts/export-permissions.cjs /app/scripts/export-permissions.cjs
 
 RUN test -f /app/presentation-export/runner.mjs \
     && test -f /app/presentation-export/node_modules/@presenton/export-core/dist/index.js

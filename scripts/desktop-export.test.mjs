@@ -15,6 +15,7 @@ test("export credentials are scoped to the two desktop origins without installin
     writeFileSync(path.join(packageDirectory, "index.mjs"), "export async function runTask(task, options) { return JSON.stringify({ task, options }); }");
     const runner = path.join(directory, "runner.mjs");
     copyFileSync(fileURLToPath(new URL("./run-presentation-export.mjs", import.meta.url)), runner);
+    copyFileSync(fileURLToPath(new URL("./export-permissions.cjs", import.meta.url)), path.join(directory, "export-permissions.cjs"));
     const origins = ["http://127.0.0.1:40001", "http://127.0.0.1:40000"];
     const token = "a".repeat(64);
     const taskFile = path.join(directory, "task.json");
