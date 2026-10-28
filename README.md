@@ -401,7 +401,7 @@ account setup available so an admin can finish configuration in Settings.
 | **BEDROCK_PROFILE_NAME** | Optional | AWS profile name. |
 | **OPENROUTER_API_KEY** | Required for `LLM=openrouter` | OpenRouter API key. |
 | **OPENROUTER_MODEL** | `openai/gpt-4o` (default) | OpenRouter model. |
-| **OPENROUTER_BASE_URL** | `https://openrouter.ai/api/v1` (default) | OpenRouter base URL. |
+| **OPENROUTER_BASE_URL** | `https://openrouter.ai/api/v1` (default) | OpenRouter base URL. Provider discovery accepts the default or this server-configured URL and does not follow redirects; configure the proxy's final API URL. |
 | **OPENROUTER_PROVIDER_ORDER** | Optional comma-separated list | Provider routing order. |
 | **OPENROUTER_ALLOW_FALLBACKS** | `true` / `false` | Optional provider fallback override. |
 | **OPENROUTER_REQUIRE_PARAMETERS** | `true` / `false` | Only route to providers supporting every request parameter. |
