@@ -1,10 +1,31 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, copyFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, copyFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { runNodeScript } from "./run-node-script.mjs";
+
+test("startup Node helpers preserve literal paths, arguments, environment and exit errors", async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "presenton node & scripts "));
+  try {
+    const script = path.join(directory, "sync & helper; script.cjs");
+    const output = path.join(directory, "output.json");
+    writeFileSync(script, 'require("node:fs").writeFileSync(process.argv[2], JSON.stringify({args: process.argv.slice(3), cwd: process.cwd(), control: process.env.PRESENTON_NODE_HELPER_CONTROL}));');
+    const args = ["spaces in an argument", "$(echo unsafe)", "one;two", "a&b"];
+    await runNodeScript(script, [output, ...args], { cwd: directory, stdio: "ignore", env: { ...process.env, PRESENTON_NODE_HELPER_CONTROL: "control" } });
+    const result = JSON.parse(readFileSync(output, "utf8"));
+    assert.deepEqual(result.args, args);
+    assert.equal(result.control, "control");
+    assert.equal(realpathSync(result.cwd), realpathSync(directory));
+    const failing = path.join(directory, "failure.cjs");
+    writeFileSync(failing, "process.exit(7);");
+    await assert.rejects(runNodeScript(failing, [], { stdio: "ignore" }), /exited with code: 7/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("export credentials are scoped to the two desktop origins without installing a hostname cookie", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "presenton-desktop-export-"));

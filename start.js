@@ -21,6 +21,7 @@ import {
 import { printPresentonStartupBanner } from "./scripts/presenton-terminal-banner.mjs";
 import userConfigEnv from "./scripts/user-config-env.cjs";
 import exportPermissions from "./scripts/export-permissions.cjs";
+import { runNodeScript as runNodeHelper } from "./scripts/run-node-script.mjs";
 
 const { buildUserConfigFromEnv, readUserConfigEnv } = userConfigEnv;
 
@@ -216,7 +217,7 @@ const runCommand = (command, commandArgs, options = {}) => {
 };
 
 const runNodeScript = (scriptPath, scriptArgs) => {
-  return runCommand(process.execPath, [scriptPath, ...scriptArgs], {
+  return runNodeHelper(scriptPath, scriptArgs, {
     cwd: __dirname,
   });
 };

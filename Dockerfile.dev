@@ -59,6 +59,7 @@ COPY scripts/run-presentation-export.mjs /app/scripts/run-presentation-export.mj
 COPY scripts/export-permissions.cjs /app/scripts/export-permissions.cjs
 COPY scripts/presenton-terminal-banner.mjs /app/scripts/presenton-terminal-banner.mjs
 COPY scripts/user-config-env.cjs /app/scripts/user-config-env.cjs
+COPY scripts/run-node-script.mjs /app/scripts/run-node-script.mjs
 RUN rm -rf /app/presentation-export \
     && node /app/scripts/sync-presentation-export.cjs --force \
     && test -f /app/presentation-export/runner.mjs \

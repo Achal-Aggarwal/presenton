@@ -62,7 +62,7 @@ test("permission normalization neither follows artifact symlinks nor crosses sto
 test("server startup preserves config and recovery data with owner-only modes", posix, (t) => {
   const root = fixture(t);
   const scripts = path.join(root, "scripts"); fs.mkdirSync(scripts);
-  for (const name of ["user-config-env.cjs", "presenton-terminal-banner.mjs", "export-permissions.cjs"]) fs.copyFileSync(new URL(name, import.meta.url), path.join(scripts, name));
+  for (const name of ["user-config-env.cjs", "presenton-terminal-banner.mjs", "export-permissions.cjs", "run-node-script.mjs"]) fs.copyFileSync(new URL(name, import.meta.url), path.join(scripts, name));
   const data = path.join(root, "data"); fs.mkdirSync(data);
   const primary = path.join(data, "userConfig.json"); const backup = `${primary}.bak`;
   fs.writeFileSync(primary, JSON.stringify({ OPENAI_API_KEY: "old-secret" }), { mode: 0o644 });
