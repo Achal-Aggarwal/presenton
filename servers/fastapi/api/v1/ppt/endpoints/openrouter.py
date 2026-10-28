@@ -62,10 +62,9 @@ def _validated_discovery_url(url: str) -> str:
         if path == f"{prefix}/providers":
             return f"{approved}/providers"
         if path.startswith(f"{prefix}/"):
-            match = _MODEL_DISCOVERY_PATH.fullmatch(path[len(prefix) + 1:])
-            if match:
-                author, slug = match.groups()
-                return f"{approved}/models/{quote(author, safe='')}/{quote(slug, safe='')}/endpoints"
+            model_path = path[len(prefix) + 1:]
+            if _MODEL_DISCOVERY_PATH.fullmatch(model_path):
+                return f"{approved}/{quote(model_path, safe='/')}"
     raise HTTPException(status_code=400, detail="Invalid OpenRouter discovery endpoint")
 
 
