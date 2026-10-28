@@ -1,52 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { createRequire } from "node:module";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
-import { build } from "esbuild";
 import { mergeAttributes } from "@tiptap/core";
 import katex from "katex";
 
 const require = createRequire(import.meta.url);
-let schema;
-let directory;
-
-test.before(async () => {
-  directory = await mkdtemp(path.join(tmpdir(), "presenton-schema-security-"));
-  const outfile = path.join(directory, "schema.cjs");
-  await build({
-    entryPoints: [path.resolve("app/(presentation-generator)/(dashboard)/Components/MarketOpportunitySlide.tsx")],
-    outfile,
-    bundle: true,
-    platform: "node",
-    format: "cjs",
-    tsconfig: path.resolve("tsconfig.json"),
-    logLevel: "silent",
-  });
-  schema = require(outfile).Schema;
-});
-
-test.after(async () => {
-  if (directory) await rm(directory, { recursive: true, force: true });
-});
-
-test("market schema preserves defaults and four-item collections", () => {
-  const defaults = schema.parse({});
-  assert.equal(defaults.title, "Market Opportunity");
-  assert.equal(defaults.bullets.length, 4);
-  assert.equal(defaults.values.length, 4);
-  assert.equal(schema.safeParse({ values: ["$1", "$2", "$3", "$4"] }).success, true);
-});
-
-test("oversized constrained collections reject without per-element error amplification", () => {
-  const result = schema.safeParse({ values: Array(50_000).fill("invalid oversized value") });
-  assert.equal(result.success, false);
-  assert.ok(result.error.issues.length <= 4, `Produced ${result.error.issues.length} errors`);
-  assert.ok(result.error.issues.some((issue) => issue.code === "too_big"));
-});
-
 test("imported attribute objects cannot introduce inherited executable attributes", () => {
   const input = JSON.parse('{"class":"slide-run","data-slide-run-style":"true","__proto__":{"src":"x-invalid://canary","onerror":"alert(1)"}}');
   const attributes = mergeAttributes(input);

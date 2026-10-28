@@ -38,8 +38,6 @@
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-hotkeys": "^0.10.0",
     "@tiptap/core": "3.30.5",
-    "@tiptap/extension-bubble-menu": "3.30.5",
-    "@tiptap/extension-floating-menu": "3.30.5",
     "@tiptap/extension-underline": "3.30.5",
     "@tiptap/pm": "3.30.5",
     "@tiptap/react": "3.30.5",
@@ -54,7 +52,6 @@
     "konva": "^10.3.0",
     "lucide-react": "^0.447.0",
     "marked": "^15.0.11",
-    "mermaid": "^11.16.1",
     "mixpanel-browser": "^2.67.0",
     "next": "16.4.1",
     "next-themes": "^0.4.6",
@@ -69,9 +66,7 @@
     "sonner": "^2.0.6",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
-    "tiptap-markdown": "^0.9.0",
-    "uuid": "^11.1.0",
-    "zod": "^4.6.6"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
@@ -89,16 +84,10 @@
     "typescript": "^5"
   },
   "overrides": {
-    "mermaid": {
-      "katex": "^0.18.2"
-    },
     "brace-expansion@^1.0.0": "1.1.21",
     "brace-expansion@^2.0.0": "2.1.7",
     "@tailwindcss/typography": {
       "postcss-selector-parser": "6.1.5"
     }
-  },
-  "peerDependencies": {
-    "zod": "^4.6.6"
   }
 }
