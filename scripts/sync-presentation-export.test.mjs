@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import test from "node:test";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import vm from "node:vm";
 
 const require = createRequire(import.meta.url);
 const {
@@ -13,6 +14,61 @@ const {
   validateSharpRuntime,
   validateExportRuntime,
 } = require("./sync-presentation-export.cjs");
+
+for (const variant of ["linux", "windows-npm-cli", "windows-cmd"]) {
+  test(`export install keeps cache paths out of shell arguments (${variant})`, () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "presenton-cache & %TEMP% !name! (test)-"));
+    try {
+      const scripts = path.join(root, "scripts");
+      fs.mkdirSync(scripts);
+      fs.writeFileSync(path.join(scripts, "run-presentation-export.mjs"), "// fixture");
+      fs.writeFileSync(path.join(scripts, "export-permissions.cjs"), "// fixture");
+      const npmCli = path.join(root, "npm-cli.js");
+      fs.writeFileSync(npmCli, "// fixture");
+      const calls = [];
+      const module = { exports: {} };
+      const env = { CONTROL: "preserved", NPM_CONFIG_CACHE: "inherited-cache", NpM_cOnFiG_cAcHe: "another-cache", ComSpec: "cmd.exe", npm_execpath: variant === "windows-npm-cli" ? npmCli : "" };
+      const source = fs.readFileSync(new URL("./sync-presentation-export.cjs", import.meta.url), "utf8");
+      vm.runInNewContext(source + "\nmodule.exports.installRuntime = installRuntime;", {
+        __dirname: scripts, module, console,
+        process: { argv: [], platform: variant === "linux" ? "linux" : "win32", execPath: process.execPath, env },
+        require(name) { return name === "child_process" ? { execFileSync(...args) { calls.push(args); } } : require(name); },
+      });
+      module.exports.installRuntime("v1.0.51", path.join(root, "export-core.tgz"));
+      assert.equal(calls.length, 1);
+      const [command, args, options] = calls[0];
+      assert.equal(options.env.npm_config_cache, path.join(root, ".cache", "presentation-export", "npm"));
+      assert.equal(options.env.CONTROL, "preserved");
+      assert.deepEqual(Object.keys(options.env).filter((name) => name.toLowerCase() === "npm_config_cache"), ["npm_config_cache"]);
+      assert.equal(options.cwd, path.join(root, "presentation-export"));
+      assert.equal(args.includes("--cache"), false);
+      assert.equal(args.some((arg) => arg.includes(root)), variant === "windows-npm-cli");
+      if (variant === "windows-cmd") {
+        assert.equal(command, "cmd.exe");
+        assert.deepEqual(Array.from(args), ["/d", "/s", "/c", "npm", "install", "--omit=dev", "--ignore-scripts", "--no-package-lock", "--no-fund", "--no-audit"]);
+      }
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+}
+
+test("npm reads metacharacter cache paths literally from its environment", { skip: !process.env.npm_execpath }, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "presenton-npm-env-"));
+  try {
+    for (const name of ["cache with spaces & symbols", "%TEMP% !name! (cache)"]) {
+      const cache = path.join(root, name);
+      const result = execFileSync(process.execPath, [process.env.npm_execpath, "config", "get", "cache"], {
+        encoding: "utf8", env: { ...process.env, npm_config_cache: cache },
+      });
+      assert.equal(result.trim(), cache);
+      if (process.platform === "win32") {
+        const fallback = execFileSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "npm", "config", "get", "cache"], {
+          encoding: "utf8", env: { ...process.env, npm_config_cache: cache },
+        });
+        assert.equal(fallback.trim(), cache);
+      }
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 function writePackage(root, packageName, packageJson) {
   const packageDirectory = path.join(
