@@ -76,6 +76,17 @@ test("CDATA styles preserve CSS escapes while XML attributes encode ampersands",
   assert.ok(markup.includes('fill="var(--theme\\&amp;accent)"'));
 });
 
+for (const opener of ["<!--", "<![CDATA["]) {
+  test(`repeated unterminated ${opener} sections cannot cause excessive scanning`, async () => {
+    await fs.writeFile(path.join(icons, "demo.svg"), safe + opener.repeat(30_000));
+    const started = performance.now();
+    const response = await route.GET(request());
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), /fill="#FF0000"/);
+    assert.ok(performance.now() - started < 5000, "XML section scanning must remain bounded");
+  });
+}
+
 test("outside-root paths, symlinks, non-files, and oversized SVGs are rejected", async () => {
   assert.equal((await route.GET(request("/static/icons/..%2f..%2foutside.svg"))).status, 400);
   await fs.symlink(path.join(directory, "outside.svg"), path.join(icons, "link.svg"));

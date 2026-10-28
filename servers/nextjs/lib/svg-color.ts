@@ -77,11 +77,30 @@ const escapeSvgStyleText = (value: string): string =>
 const mapSvgSections = (
     input: string,
     transform: (section: string, cdata: boolean) => string
-): string => input.split(/(<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>)/g)
-    .map((section) => section.startsWith("<!--")
-        ? section
-        : transform(section, section.startsWith("<![CDATA[")))
-    .join("");
+): string => {
+    const output: string[] = [];
+    let cursor = 0;
+    let sectionStart = 0;
+    while (cursor < input.length) {
+        const marker = input.indexOf("<!", cursor);
+        if (marker < 0) break;
+        const comment = input.startsWith("<!--", marker);
+        const cdata = input.startsWith("<![CDATA[", marker);
+        if (!comment && !cdata) {
+            cursor = marker + 2;
+            continue;
+        }
+        const end = input.indexOf(comment ? "-->" : "]]>", marker + (comment ? 4 : 9));
+        if (end < 0) break;
+        output.push(transform(input.slice(sectionStart, marker), false));
+        const section = input.slice(marker, end + 3);
+        output.push(comment ? section : transform(section, true));
+        cursor = end + 3;
+        sectionStart = cursor;
+    }
+    output.push(transform(input.slice(sectionStart), false));
+    return output.join("");
+};
 
 const shouldPreservePaintValue = (value: string): boolean => {
     const normalized = value.trim().toLowerCase();
