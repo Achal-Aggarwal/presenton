@@ -47,6 +47,35 @@ test("community icon URLs retain local recoloring and reject markup in paint fie
   assert.equal(rejectedPaint.status, 200); assert.equal(await rejectedPaint.text(), safe);
 });
 
+test("recoloring quotes unquoted attributes so functional colors remain valid XML", async () => {
+  await fs.writeFile(path.join(icons, "demo.svg"), '<svg xmlns="http://www.w3.org/2000/svg" fill=#000000><path fill=#000000/></svg>');
+  const response = await route.GET(request(undefined, "rgb(255 0 0)"));
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /fill="rgb\(255 0 0\)"/);
+});
+
+test("request-derived paint is XML-escaped at attribute and style insertion", async () => {
+  await fs.writeFile(path.join(icons, "demo.svg"), '<svg xmlns="http://www.w3.org/2000/svg" fill="#000000"><path style="fill:#000000;color:#111111"/></svg>');
+  const response = await route.GET(request(undefined, "var(--theme&accent)"));
+  assert.equal(response.status, 200);
+  const markup = await response.text();
+  assert.match(markup, /var\(--theme&amp;accent\)/);
+  assert.doesNotMatch(markup, /var\(--theme&accent\)/);
+  assert.doesNotMatch(markup, /&amp;amp;/);
+});
+
+test("CDATA styles preserve CSS escapes while XML attributes encode ampersands", async () => {
+  await fs.writeFile(path.join(icons, "demo.svg"), '<svg xmlns="http://www.w3.org/2000/svg" fill="#000000"><style><![CDATA[.control{fill:#000000;stroke:#000000}]]></style><path class="control"/></svg>');
+  const color = "var(--theme\\&accent)";
+  const response = await route.GET(request(undefined, color));
+  assert.equal(response.status, 200);
+  const markup = await response.text();
+  const style = markup.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1];
+  assert.ok(style.includes(color));
+  assert.equal(style.includes("&amp;"), false);
+  assert.ok(markup.includes('fill="var(--theme\\&amp;accent)"'));
+});
+
 test("outside-root paths, symlinks, non-files, and oversized SVGs are rejected", async () => {
   assert.equal((await route.GET(request("/static/icons/..%2f..%2foutside.svg"))).status, 400);
   await fs.symlink(path.join(directory, "outside.svg"), path.join(icons, "link.svg"));

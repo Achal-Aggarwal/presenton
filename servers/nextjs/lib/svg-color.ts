@@ -64,6 +64,25 @@ const ROOT_SVG_TAG_PATTERN = /<svg\b([^>]*)>/i;
 const escapeRegExp = (value: string): string =>
     value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const escapeSvgAttributeValue = (value: string): string =>
+    value.replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+const escapeSvgStyleText = (value: string): string =>
+    value.replace(/[<>"']/g, (character) => `\\${character.charCodeAt(0).toString(16)} `);
+
+const mapSvgSections = (
+    input: string,
+    transform: (section: string, cdata: boolean) => string
+): string => input.split(/(<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>)/g)
+    .map((section) => section.startsWith("<!--")
+        ? section
+        : transform(section, section.startsWith("<![CDATA[")))
+    .join("");
+
 const shouldPreservePaintValue = (value: string): boolean => {
     const normalized = value.trim().toLowerCase();
     return (
@@ -87,12 +106,14 @@ const replaceAttributeValue = (
         new RegExp(`(\\s${escapedAttrName}\\s*=\\s*")(.*?)(")`, "gi"),
         new RegExp(`(\\s${escapedAttrName}\\s*=\\s*')(.*?)(')`, "gi"),
         new RegExp(
-            `(\\s${escapedAttrName}\\s*=\\s*)([^\\s"'=<>` + "`" + `]+)`,
+            `(\\s${escapedAttrName}\\s*=\\s*)([^\\s"'=<>` + "`" + `]+?)(?=\\s|/?>)`,
             "gi"
         ),
     ];
 
-    return patterns.reduce((output, pattern) => {
+    return mapSvgSections(input, (section, cdata) => {
+      const escapedValue = cdata ? escapeSvgStyleText(nextValue) : escapeSvgAttributeValue(nextValue);
+      return patterns.reduce((output, pattern) => {
         return output.replace(
             pattern,
             (match, prefix: string, currentValue: string, suffix?: string) => {
@@ -100,12 +121,13 @@ const replaceAttributeValue = (
                     return match;
                 }
 
-                return suffix
-                    ? `${prefix}${nextValue}${suffix}`
-                    : `${prefix}${nextValue}`;
+                return typeof suffix === "string"
+                    ? `${prefix}${escapedValue}${suffix}`
+                    : `${prefix}"${escapedValue}"`;
             }
         );
-    }, input);
+      }, section);
+    });
 };
 
 const replaceStyleValue = (
@@ -120,7 +142,9 @@ const replaceStyleValue = (
         "gi"
     );
 
-    return input.replace(
+    return mapSvgSections(input, (section, cdata) => {
+      const escapedValue = cdata ? escapeSvgStyleText(nextValue) : escapeSvgAttributeValue(nextValue);
+      return section.replace(
         pattern,
         (
             match,
@@ -132,9 +156,10 @@ const replaceStyleValue = (
                 return match;
             }
 
-            return `${prefix}${nextValue}${trailingWhitespace}`;
+            return `${prefix}${escapedValue}${trailingWhitespace}`;
         }
-    );
+      );
+    });
 };
 
 const replaceSvgValue = (
@@ -153,6 +178,7 @@ const upsertRootAttribute = (
     attrName: string,
     nextValue: string
 ): string => {
+    const escapedValue = escapeSvgAttributeValue(nextValue);
     return input.replace(ROOT_SVG_TAG_PATTERN, (match, attrs: string) => {
         let updatedAttrs = attrs;
         const escapedAttrName = escapeRegExp(attrName);
@@ -160,7 +186,7 @@ const upsertRootAttribute = (
             new RegExp(`(\\s${escapedAttrName}\\s*=\\s*")(.*?)(")`, "i"),
             new RegExp(`(\\s${escapedAttrName}\\s*=\\s*')(.*?)(')`, "i"),
             new RegExp(
-                `(\\s${escapedAttrName}\\s*=\\s*)([^\\s"'=<>` + "`" + `]+)`,
+                `(\\s${escapedAttrName}\\s*=\\s*)([^\\s"'=<>` + "`" + `]+?)(?=\\s|/?>)`,
                 "i"
             ),
         ];
@@ -175,9 +201,9 @@ const upsertRootAttribute = (
                         _currentValue: string,
                         suffix?: string
                     ) => {
-                        return suffix
-                            ? `${prefix}${nextValue}${suffix}`
-                            : `${prefix}${nextValue}`;
+                        return typeof suffix === "string"
+                            ? `${prefix}${escapedValue}${suffix}`
+                            : `${prefix}"${escapedValue}"`;
                     }
                 );
 
@@ -185,7 +211,7 @@ const upsertRootAttribute = (
             }
         }
 
-        return `<svg${updatedAttrs} ${attrName}="${nextValue}">`;
+        return `<svg${updatedAttrs} ${attrName}="${escapedValue}">`;
     });
 };
 
