@@ -80,3 +80,21 @@ def test_malformed_diagnostic_does_not_break_the_request(caplog):
     with caplog.at_level(logging.INFO, logger=LOGGER.name):
         safe_log(LOGGER, logging.INFO, "count=%d", "not a number")
     assert caplog.records[-1].getMessage() == "Unable to format diagnostic message"
+
+
+def test_exception_traceback_cannot_introduce_forged_lines_or_terminal_controls(caplog):
+    error = ValueError("provider error" + chr(10) + "FORGED record" + chr(27) + "[2J")
+    error.add_note("request note" + chr(13) + chr(10) + "FORGED note")
+    with caplog.at_level(logging.ERROR, logger=LOGGER.name):
+        try:
+            raise error
+        except ValueError:
+            safe_log_exception(LOGGER, "provider failed", extra={"event_type": "provider"})
+    record = caplog.records[-1]
+    rendered = logging.Formatter("%(levelname)s %(message)s").format(record)
+    assert "\nFORGED" not in rendered
+    assert "\r" not in rendered and "\x1b" not in rendered
+    assert "\\nFORGED record\\x1b[2J" in rendered
+    assert "Traceback" in rendered and "ValueError" in rendered
+    assert record.exc_info[1] is error and record.event_type == "provider"
+    assert record.pathname == __file__
