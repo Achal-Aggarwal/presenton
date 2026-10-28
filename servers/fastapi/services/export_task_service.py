@@ -25,6 +25,8 @@ from utils.runtime_limits import (
     log_memory,
 )
 
+from utils.safe_logging import safe_log
+
 LOGGER = logging.getLogger(__name__)
 
 EXPORT_DIRECTORY_MODE = 0o755
@@ -426,7 +428,7 @@ class ExportTaskService:
         cookie_header: str | None = None,
     ) -> PresentationExportTaskResult:
         log_url = url.split("#", 1)[0] if "#" in url else url
-        LOGGER.info(
+        safe_log(LOGGER, logging.INFO,
             "[export_runtime] export_from_url url=%s format=%s cookie_header=%s",
             log_url,
             export_as,
